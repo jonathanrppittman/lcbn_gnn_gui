@@ -1,0 +1,24 @@
+workspace_dir: /home/jonathanpittman/Documents/gnn-gui
+jobs_dir: /home/jonathanpittman/Documents/gnn-gui/jobs
+logs_dir: /home/jonathanpittman/Documents/gnn-gui/logs
+
+conversion:
+  script_path: ""
+  default_args: "--inputs {inputs} --output {output_dir}"
+
+training:
+  script_path: ""
+  default_args: "--data {dataset_dir} --model {model}"
+
+slurm:
+  use_slurm_by_default: false
+  account: ""
+  partition: ""
+  qos: ""
+  gpus: 1
+  cpus: 4
+  mem: "16G"
+  time: "02:00:00"
+  additional: ""
+  env_activation: ""  # e.g., source ~/.bashrc && conda activate gnn
+
