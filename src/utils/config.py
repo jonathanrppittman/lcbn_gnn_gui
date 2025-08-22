@@ -42,7 +42,7 @@ def load_config() -> Dict[str, Any]:
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     # Merge defaults
-    def merge(d, default):
+    def merge(d: Dict[str, Any], default: Dict[str, Any]) -> Dict[str, Any]:
         for k, v in default.items():
             if isinstance(v, dict):
                 d[k] = merge(d.get(k, {}) or {}, v)

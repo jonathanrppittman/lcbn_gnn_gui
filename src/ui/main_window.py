@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 import os
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QFileDialog, QMessageBox, QApplication,
@@ -19,7 +19,7 @@ def _detect_interpreter(script_path: str) -> str:
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("GNN GUI")
         self.config = load_config()
@@ -110,12 +110,12 @@ class MainWindow(QMainWindow):
         self.destroyed.connect(self._persist_config)
 
     # ------------- UI Handlers -------------
-    def _pick_conv_script(self):
+    def _pick_conv_script(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Select conversion script")
         if path:
             self.conv_script.setText(path)
 
-    def _add_mat_files(self):
+    def _add_mat_files(self) -> None:
         files, _ = QFileDialog.getOpenFileNames(self, "Select .mat files", filter="MAT (*.mat)")
         for f in files:
             if f and self.files_list.findItems(f, Qt.MatchExactly):
@@ -123,36 +123,36 @@ class MainWindow(QMainWindow):
             if f:
                 self.files_list.addItem(f)
 
-    def _add_folder(self):
+    def _add_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Select folder containing .mat files")
         if folder:
             for name in sorted(os.listdir(folder)):
                 if name.lower().endswith('.mat'):
                     self.files_list.addItem(os.path.join(folder, name))
 
-    def _pick_out_dir(self):
+    def _pick_out_dir(self) -> None:
         d = QFileDialog.getExistingDirectory(self, "Select output directory")
         if d:
             self.out_dir.setText(d)
 
-    def _pick_train_script(self):
+    def _pick_train_script(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Select training script")
         if path:
             self.train_script.setText(path)
 
-    def _pick_dataset_dir(self):
+    def _pick_dataset_dir(self) -> None:
         d = QFileDialog.getExistingDirectory(self, "Select dataset directory (.pt files)")
         if d:
             self.dataset_dir.setText(d)
 
     # ------------- Command builders -------------
-    def _format_args(self, template: str, mapping: dict) -> str:
+    def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
         result = template
         for k, v in mapping.items():
             result = result.replace("{" + k + "}", v)
         return result
 
-    def _run_conversion(self):
+    def _run_conversion(self) -> None:
         script = self.conv_script.text().strip()
         if not script:
             QMessageBox.warning(self, "Missing script", "Please select a conversion script.")
@@ -169,7 +169,7 @@ class MainWindow(QMainWindow):
         command = f"{_detect_interpreter(script)} {args_filled}".strip()
         self._start_command(command)
 
-    def _run_training(self):
+    def _run_training(self) -> None:
         script = self.train_script.text().strip()
         if not script:
             QMessageBox.warning(self, "Missing script", "Please select a training script.")
@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
             self._start_command(command)
 
     # ------------- Runner -------------
-    def _start_command(self, command: str):
+    def _start_command(self, command: str) -> None:
         if self.runner and self.runner.isRunning():
             QMessageBox.information(self, "Busy", "A job is already running. Please wait.")
             return
@@ -204,15 +204,15 @@ class MainWindow(QMainWindow):
         self.runner.finished.connect(self._on_finished)
         self.runner.start()
 
-    def _append_console(self, text: str):
+    def _append_console(self, text: str) -> None:
         self.console.moveCursor(self.console.textCursor().End)
         self.console.insertPlainText(text)
         self.console.moveCursor(self.console.textCursor().End)
 
-    def _on_finished(self, code: int):
+    def _on_finished(self, code: int) -> None:
         self._append_console(f"\nProcess finished with code {code}\n")
 
-    def _persist_config(self):
+    def _persist_config(self) -> None:
         self.config["conversion"]["script_path"] = self.conv_script.text().strip()
         self.config["training"]["script_path"] = self.train_script.text().strip()
         save_config(self.config)

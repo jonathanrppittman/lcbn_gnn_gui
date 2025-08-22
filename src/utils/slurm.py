@@ -1,10 +1,10 @@
 import os
 import datetime as _dt
 import subprocess
-from typing import Dict
+from typing import Dict, Any
 
 
-def _make_sbatch_header(cfg: Dict) -> str:
+def _make_sbatch_header(cfg: Dict[str, Any]) -> str:
     slurm = cfg.get("slurm", {})
     lines = [
         "#!/usr/bin/env bash",
@@ -25,7 +25,7 @@ def _make_sbatch_header(cfg: Dict) -> str:
     return "\n".join(lines)
 
 
-def write_job_script(command: str, cfg: Dict) -> str:
+def write_job_script(command: str, cfg: Dict[str, Any]) -> str:
     jobs_dir = cfg["jobs_dir"]
     os.makedirs(jobs_dir, exist_ok=True)
     stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")

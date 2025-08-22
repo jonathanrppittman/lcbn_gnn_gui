@@ -1,21 +1,19 @@
-from PyQt6.QtWidgets import QApplication, QPushButton 
-
-# Only needed for access to command line arguments
+from PyQt6.QtWidgets import QApplication, QMainWindow
 import sys
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-        self.setWind
+        self.setWindowTitle("GNN GUI")
 
 # You need one (and only one) QApplication instance per application.
 # Pass in sys.argv to allow command line arguments for your app.
 # If you know you won't use command line arguments QApplication([]) works too.
-app = QApplication(sys.argv)
+app: QApplication = QApplication(sys.argv)
 
 # Create a Qt widget, which will be our window.
-window = MainWindow()
+window: MainWindow = MainWindow()
 window.show()  # IMPORTANT!!!!! Windows are hidden by default.
 
 # Start the event loop.
