@@ -1,6 +1,6 @@
-workspace_dir: /home/jonathanpittman/Documents/gnn-gui
-jobs_dir: /home/jonathanpittman/Documents/gnn-gui/jobs
-logs_dir: /home/jonathanpittman/Documents/gnn-gui/logs
+workspace_dir: "."  # Current directory (repository root)
+jobs_dir: "./jobs"  # Relative to repository root
+logs_dir: "./logs"  # Relative to repository root
 
 conversion:
   script_path: ""
@@ -21,4 +21,3 @@ slurm:
   time: "02:00:00"
   additional: ""
   env_activation: ""  # e.g., source ~/.bashrc && conda activate gnn
-
