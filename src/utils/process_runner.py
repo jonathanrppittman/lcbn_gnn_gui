@@ -14,7 +14,7 @@ class CommandRunner(QThread):
         self.working_dir = working_dir
         self.env = env or os.environ.copy()
 
-    def run(self):
+    def run(self) -> None:
         proc = subprocess.Popen([
             "/usr/bin/bash", "-lc", self.command
         ], cwd=self.working_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=self.env, bufsize=1)

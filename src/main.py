@@ -3,9 +3,9 @@ from PyQt5.QtWidgets import QApplication
 from ui.main_window import MainWindow
 
 
-def main():
-    app = QApplication(sys.argv)
-    w = MainWindow()
+def main() -> None:
+    app: QApplication = QApplication(sys.argv)
+    w: MainWindow = MainWindow()
     w.resize(1000, 700)
     w.show()
     sys.exit(app.exec_())
