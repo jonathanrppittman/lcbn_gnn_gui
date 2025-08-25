@@ -4,7 +4,7 @@ logs_dir: "./logs"  # Relative to repository root
 
 conversion:
   script_path: ""
-  default_args: "--inputs {inputs} --output {output_dir}"
+  default_args: "--inputs {inputs} --labels {labels} --output {output_dir}"
 
 training:
   script_path: ""
