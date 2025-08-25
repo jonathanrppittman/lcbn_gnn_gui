@@ -10,7 +10,7 @@ _DEFAULT_CONFIG: Dict[str, Any] = {
     "workspace_dir": REPO_ROOT,
     "jobs_dir": os.path.join(REPO_ROOT, "jobs"),
     "logs_dir": os.path.join(REPO_ROOT, "logs"),
-    "conversion": {"script_path": "", "default_args": "--inputs {inputs} --output {output_dir}"},
+    "conversion": {"script_path": "", "default_args": "--inputs {inputs} --labels {labels} --output_dir {output_dir}"},
     "training": {"script_path": "", "default_args": "--data {dataset_dir} --model {model}"},
     "slurm": {
         "use_slurm_by_default": False,

@@ -59,10 +59,18 @@ class MainWindow(QMainWindow):
 
         files_row = QHBoxLayout()
         root.addLayout(files_row)
+
+        inputs_col = QVBoxLayout()
+        files_row.addLayout(inputs_col)
+        inputs_col.addWidget(QLabel("Input Files:"))
         self.files_list = QListWidget()
-        files_row.addWidget(self.files_list)
+        inputs_col.addWidget(self.files_list)
+
+        labels_col = QVBoxLayout()
+        files_row.addLayout(labels_col)
+        labels_col.addWidget(QLabel("Label File(s):"))
         self.labels_list = QListWidget()
-        files_row.addWidget(self.labels_list)
+        labels_col.addWidget(self.labels_list)
 
         actions_row = QHBoxLayout()
         root.addLayout(actions_row)
