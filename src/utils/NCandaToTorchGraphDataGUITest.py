@@ -1,57 +1,3 @@
-'''
-# %%
-import torch
-data = torch.load('data.pt')
-
-# %%
-data
-
-# %%
-data, data2 = torch.load('data.pt')
-
-# %%
-data
-
-# %%
-data2
-
-# %%
-print(data)               
-print(data.x.shape)       
-print(data.edge_index.shape)  
-print(data.y.shape)      
-
-# %%
-node_offsets = data2['x']
-edge_offsets = data2['edge_index']
-labels = data2['y']
-node_offsets, edge_offsets
-
-# %%
-i = 0
-start_node = node_offsets[i].item()
-end_node = node_offsets[i+1].item() if i+1 < len(node_offsets) else adjAll.size(0)
-start_node, end_node
-
-# %%
-x = data['x'][start_node:end_node]
-x.shape , x
-
-# %%
-i = 0
-edge_indeadjAll = data.edge_index
-
-start_edge = edge_offsets[i].item()
-end_edge = edge_offsets[i+1].item() if i+1 < len(edge_offsets) else edge_indeadjAll.size(1)
-start_edge, end_edge
-
-edge_index = edge_indeadjAll[:, start_edge:end_edge] - start_node 
-edge_index.shape, edge_index
-
-# %%
-
-'''
-# %%
 import scipy
 import scipy.io
 import torch
@@ -60,13 +6,7 @@ from torch_geometric.data import Data
 from collections import defaultdict
 import argparse
 import pandas as pd
-import argparse
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--num_labels', type=int, default=2) #default assumes binary classification
-parser.add_argument('--label_column', type=str, default='cddr15a')
-parser.add_argument('--threshold', type=float, default=0.05)
-args = parser.parse_args()
+import os
 
 def threshold_proportional(W: np.ndarray, p: float = 0.05) -> np.ndarray: #python version of BCT function originally written in MATLAB
     """
@@ -108,144 +48,93 @@ def threshold_proportional(W: np.ndarray, p: float = 0.05) -> np.ndarray: #pytho
 
     return W_thr
 
+def main():
+    parser = argparse.ArgumentParser(description="Convert NCANDA .mat files to PyTorch Geometric data.")
+    parser.add_argument('--inputs', type=str, nargs='+', required=True, help='List of input .mat file paths.')
+    parser.add_argument('--labels', type=str, required=True, help='Path to the labels .mat file.')
+    parser.add_argument('--output_dir', type=str, required=True, help='Directory to save the output .pt file.')
+    parser.add_argument('--num_labels', type=int, default=2, help='Number of labels for classification (default: 2).')
+    parser.add_argument('--label_column', type=str, default='cddr15a', help='The column name in the labels file to use.')
+    parser.add_argument('--threshold', type=float, default=0.05, help='Proportional threshold for connectivity matrix (default: 0.05).')
+    args = parser.parse_args()
 
-# %%
-DataPath1 = '/isilon/datalake/lcbn_research/final/beach/JonathanP/DataNew_500And998ROIs/NCANDA_CorrMats500ROIs_1.mat'
-DataPath2 = '/isilon/datalake/lcbn_research/final/beach/JonathanP/DataNew_500And998ROIs/NCANDA_CorrMats500ROIs_2.mat'
-DataPath3 = '/isilon/datalake/lcbn_research/final/beach/JonathanP/DataNew_500And998ROIs/NCANDA_CorrMats500ROIs_3.mat'
-DataPath4 = '/isilon/datalake/lcbn_research/final/beach/JonathanP/DataNew_500And998ROIs/NCANDA_CorrMats500ROIs_4.mat'
-LabelsPath = '/isilon/datalake/lcbn_research/final/beach/JonathanP/DataNew_500And998ROIs/LabelsTotal_500.mat'
+    # Load input data
+    input_matrices = []
+    for path in args.inputs:
+        mat_file = scipy.io.loadmat(path)
+        # Find the variable name in the .mat file, ignoring metadata
+        var_name = [k for k in mat_file.keys() if not k.startswith('__')][0]
+        input_matrices.append(mat_file[var_name])
 
-# %%
-NCanda1 = scipy.io.loadmat(DataPath1)
-NCanda2 = scipy.io.loadmat(DataPath2)
-NCanda3 = scipy.io.loadmat(DataPath3)
-NCanda4 = scipy.io.loadmat(DataPath4)
+    # Concatenate all input matrices
+    TasksAll = np.concatenate(input_matrices, axis=2)
 
-labels = scipy.io.loadmat(LabelsPath)
+    # Load labels
+    labels_mat = scipy.io.loadmat(args.labels)
+    labels_var_name = [k for k in labels_mat.keys() if not k.startswith('__')][0]
+    labels_array = labels_mat[labels_var_name]
 
+    # Process labels
+    cddr15a = pd.Series(labels_array[:, 0].flatten())
+    nan_indices = cddr15a[cddr15a.isna()].index.tolist()
+    cleaned_column = cddr15a.dropna().tolist()
 
-NCanda1 = NCanda1['NCANDA_CorrMats500ROIs_1']
-NCanda2 = NCanda2['NCANDA_CorrMats500ROIs_2']
-NCanda3 = NCanda3['NCANDA_CorrMats500ROIs_3']
-NCanda4 = NCanda4['NCANDA_CorrMats500ROIs_4']
-labels_array = labels['LabelsTotal_500']
+    # Remove subjects with NaN labels from the data
+    TasksAll = np.delete(TasksAll, nan_indices, axis=2)
 
-cddr15a = pd.Series(labels_array[:, 0].flatten())
-nan_indices = cddr15a[cddr15a.isna()].index.tolist()
-cleaned_column = cddr15a.dropna().tolist()
+    print(f'Tasks shape: {TasksAll.shape}')
+    print(f'Cleaned Column Length: {len(cleaned_column)}')
 
+    AdjMats = TasksAll
+    GraphsNum = AdjMats.shape[2]
 
-'''
-X = np.concatenate([Task1, Task2, Task3, Task4, Task5, Task6, Task7], axis=0)
-#X = np.concatenate([Task1, Task2, Task3], axis=2)
+    x_all = []
+    edge_index_all = []
+    labels = []
 
-del Task1
-gc.collect()
-del Task2
-gc.collect()
-del Task3
-gc.collect()
+    data2 = defaultdict(dict)
+    node_offsets = []
+    edge_offsets = []
 
-del Task4
-gc.collect()
-del Task5
-gc.collect()
-del Task6
-gc.collect()
-del Task7
-gc.collect()
-'''
+    node_offset = 0
+    edge_offset = 0
 
-# %%
-#Task1.shape, Task2.shape, Task3.shape
-#[0,0,0, ..., 0,1,....,1,2,...,6] #size = 794*7
+    for i in range(GraphsNum):
+        Adj_i = threshold_proportional(AdjMats[:, :, i], args.threshold)
 
-# %%
-TasksAll = np.concatenate([NCanda1, NCanda2, NCanda3, NCanda4], axis=2)
+        x = torch.tensor(Adj_i, dtype=torch.float32)
 
-TasksAll = np.delete(TasksAll, nan_indices, axis=2)
+        row, col = np.where(Adj_i > 0)
+        mask = row != col
+        row, col = row[mask], col[mask]
+        edge_index = torch.tensor([row, col], dtype=torch.long)
 
-print(f'Tasks shape: {TasksAll.shape}')
-print(f'Cleaned Column Length: {len(cleaned_column)}')
+        x_all.append(x)
+        edge_index_all.append(edge_index)
+        labels.append(torch.tensor(cleaned_column[i], dtype=torch.long))
 
+        node_offsets.append(node_offset)
+        edge_offsets.append(edge_offset)
 
-# %%
-CorrMatsAll = TasksAll 
-AdjMats = CorrMatsAll #(CorrMatsAll > 0.5).astype(np.uint8)  
-AdjMats.shape
+        node_offset += x.size(0)
+        edge_offset += edge_index.size(1)
 
-# %%
-NodesNum = AdjMats.shape[0]
-GraphsNum = AdjMats.shape[2]
+    x_all = torch.vstack(x_all)
+    edge_index_all = torch.cat(edge_index_all, dim=1)
+    y_all = torch.vstack(labels)
 
-# %%
-i = 0
-Adj_i = AdjMats[:, :, i]
-x = torch.tensor(Adj_i, dtype=torch.float32)
-x.shape
-row, col = np.where(Adj_i > 0)
-mask = row != col
-row, col = row[mask], col[mask]
-edge_index = torch.tensor([row, col], dtype=torch.long)
-edge_index
+    data2['x'] = torch.tensor(node_offsets + [x_all.size(0)])
+    data2['edge_index'] = torch.tensor(edge_offsets + [edge_index_all.size(1)])
+    data2['y'] = y_all
 
-# %%
+    TorchGraph_Data = Data(x=x_all, edge_index=edge_index_all, y=y_all)
+    data = (TorchGraph_Data, data2)
 
-
-# %%
-x_all = []
-edge_index_all = []
-labels = []
-
-data2 = defaultdict(dict)
-node_offsets = []
-edge_offsets = []
-
-node_offset = 0
-edge_offset = 0
-
-for i in range(GraphsNum):
-    Adj_i = threshold_proportional(AdjMats[:, :, i], args.threshold)
-
-    # threshold Aij - use their function based density thresholoding
+    output_filename = f'NCandaData500_{args.label_column}_{int(args.threshold * 100)}pct.pt'
+    output_path = os.path.join(args.output_dir, output_filename)
     
-    x = torch.tensor(Adj_i, dtype=torch.float32)
+    torch.save(data, output_path)
+    print(f"Saved data to {output_path}")
 
-    row, col = np.where(Adj_i > 0)
-    mask = row != col
-    row, col = row[mask], col[mask]
-    edge_index = torch.tensor([row, col], dtype=torch.long)
-
-    x_all.append(x)
-    edge_index_all.append(edge_index)
-    #labels.append(torch.tensor(i))
-    num_labels = args.num_labels
-    labels.append(torch.tensor(cleaned_column[i], dtype=torch.long))
-
-
-    node_offsets.append(node_offset)
-    edge_offsets.append(edge_offset)
-
-    node_offset += x.size(0)
-    edge_offset += edge_index.size(1)
-
-# %%
-
-
-# %%
-x_all = torch.vstack(x_all)                        
-edge_index_all = torch.cat(edge_index_all, dim=1)  
-y_all = torch.vstack(labels)                       
-
-data2['x'] = torch.tensor(node_offsets + [x_all.size(0)])
-data2['edge_index'] = torch.tensor(edge_offsets + [edge_index_all.size(1)])
-data2['y'] = y_all
-
-TorchGraph_Data = Data(x=x_all, edge_index=edge_index_all, y=y_all)
-data = (TorchGraph_Data, data2)
-
-torch.save(data, f'GUItest_NCandaData500{args.label_column}_{int(args.threshold * 100)}pct.pt')
-
-# %%
-data
+if __name__ == "__main__":
+    main()
