@@ -29,6 +29,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
 
+        # Theme switcher
+        theme_row = QHBoxLayout()
+        root.addLayout(theme_row)
+        theme_row.addStretch(1)
+        self.theme_toggle = QCheckBox("Dark Mode")
+        self.theme_toggle.toggled.connect(self._toggle_theme)
+        theme_row.addWidget(self.theme_toggle)
+        self._load_theme()
+
         # Conversion widgets
         conv_row = QHBoxLayout()
         root.addLayout(conv_row)
@@ -251,6 +260,27 @@ class MainWindow(QMainWindow):
         self.config["conversion"]["script_path"] = self.conv_script.text().strip()
         self.config["training"]["script_path"] = self.train_script.text().strip()
         save_config(self.config)
+
+    def _load_theme(self) -> None:
+        is_dark = self.config.get("theme", "light") == "dark"
+        self.theme_toggle.setChecked(is_dark)
+        self._apply_theme(is_dark)
+
+    def _toggle_theme(self, checked: bool) -> None:
+        self._apply_theme(checked)
+        self.config["theme"] = "dark" if checked else "light"
+        save_config(self.config)
+
+    def _apply_theme(self, dark: bool) -> None:
+        if dark:
+            # Load dark stylesheet
+            p = os.path.dirname(__file__)
+            qss_path = os.path.join(p, "dark_theme.qss")
+            with open(qss_path, "r") as f:
+                self.setStyleSheet(f.read())
+        else:
+            # Reset to default
+            self.setStyleSheet("")
 
 
 if __name__ == "__main__":
