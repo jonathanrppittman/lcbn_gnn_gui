@@ -41,9 +41,12 @@ class MainWindow(QMainWindow):
 
         add_files_row = QHBoxLayout()
         root.addLayout(add_files_row)
-        self.btn_add_files = QPushButton("Add .mat files")
+        self.btn_add_files = QPushButton("Add .mat inputs")
         self.btn_add_files.clicked.connect(self._add_mat_files)
         add_files_row.addWidget(self.btn_add_files)
+        self.btn_add_labels = QPushButton("Add .mat labels")
+        self.btn_add_labels.clicked.connect(self._add_label_files)
+        add_files_row.addWidget(self.btn_add_labels)
         self.btn_add_dir = QPushButton("Add folder")
         self.btn_add_dir.clicked.connect(self._add_folder)
         add_files_row.addWidget(self.btn_add_dir)
@@ -57,10 +60,18 @@ class MainWindow(QMainWindow):
         files_row = QHBoxLayout()
         root.addLayout(files_row)
         self.files_list = QListWidget()
-        files_row.addWidget(self.files_list, 1)
+        files_row.addWidget(self.files_list)
+        self.labels_list = QListWidget()
+        files_row.addWidget(self.labels_list)
+
+        actions_row = QHBoxLayout()
+        root.addLayout(actions_row)
+        self.use_slurm_conversion = QCheckBox("Submit with SLURM (sbatch)")
+        actions_row.addWidget(self.use_slurm_conversion)
+        actions_row.addStretch(1)
         self.btn_convert = QPushButton("Convert to .pt")
         self.btn_convert.clicked.connect(self._run_conversion)
-        files_row.addWidget(self.btn_convert)
+        actions_row.addWidget(self.btn_convert)
 
         # Training widgets
         train_row1 = QHBoxLayout()
@@ -116,12 +127,18 @@ class MainWindow(QMainWindow):
             self.conv_script.setText(path)
 
     def _add_mat_files(self) -> None:
-        files, _ = QFileDialog.getOpenFileNames(self, "Select .mat files", filter="MAT (*.mat)")
+        self._add_files_to_list(self.files_list, "Select .mat input files")
+
+    def _add_label_files(self) -> None:
+        self._add_files_to_list(self.labels_list, "Select .mat label files")
+
+    def _add_files_to_list(self, list_widget: QListWidget, title: str) -> None:
+        files, _ = QFileDialog.getOpenFileNames(self, title, filter="MAT (*.mat)")
         for f in files:
-            if f and self.files_list.findItems(f, Qt.MatchExactly):
+            if f and list_widget.findItems(f, Qt.MatchExactly):
                 continue
             if f:
-                self.files_list.addItem(f)
+                list_widget.addItem(f)
 
     def _add_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Select folder containing .mat files")
@@ -162,12 +179,30 @@ class MainWindow(QMainWindow):
             return
         out_dir = self.out_dir.text().strip() or self.config.get("workspace_dir", "")
         os.makedirs(out_dir, exist_ok=True)
+
         input_files: List[str] = [self.files_list.item(i).text() for i in range(self.files_list.count())]
         inputs_str = " ".join(f'"{p}"' for p in input_files)
+
+        label_files: List[str] = [self.labels_list.item(i).text() for i in range(self.labels_list.count())]
+        labels_str = " ".join(f'"{p}"' for p in label_files)
+
         args_template = self.config["conversion"].get("default_args", "")
-        args_filled = self._format_args(args_template, {"inputs": inputs_str, "output_dir": f'"{out_dir}"'})
+        args_filled = self._format_args(args_template, {
+            "inputs": inputs_str,
+            "labels": labels_str,
+            "output_dir": f'"{out_dir}"'
+        })
         command = f"{_detect_interpreter(script)} {args_filled}".strip()
-        self._start_command(command)
+
+        if self.use_slurm_conversion.isChecked():
+            script_path = write_job_script(command, self.config)
+            result = submit_job(script_path)
+            if result.returncode == 0:
+                self._append_console(f"Submitted: {result.stdout}")
+            else:
+                self._append_console(f"SLURM submit failed: {result.stderr}")
+        else:
+            self._start_command(command)
 
     def _run_training(self) -> None:
         script = self.train_script.text().strip()
