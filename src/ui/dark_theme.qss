@@ -1,0 +1,90 @@
+/*
+ * Dark Style Sheet for Qt Applications
+ *
+ * Author: Colin Duquesnoy
+ *
+ * Copyright (c) 2012-2014 Colin Duquesnoy
+ *
+ * This software is MIT licensed.
+ */
+
+QWidget{
+    background-color: #323232;
+    color: #f0f0f0;
+    border-color: #5d5d5d;
+}
+
+QToolTip {
+    background-color: #8c8c8c;
+    color: black;
+    padding: 5px;
+    border: 1px solid #5d5d5d;
+    border-radius: 2px;
+    opacity: 230;
+}
+
+QTextEdit, QLineEdit, QListWidget {
+    background-color: #464646;
+    color: #f0f0f0;
+    border: 1px solid #5d5d5d;
+    border-radius: 2px;
+}
+
+QPushButton{
+    background-color: #505050;
+    color: #f0f0f0;
+    border: 1px solid #5d5d5d;
+    padding: 5px;
+    border-radius: 2px;
+}
+
+QPushButton:hover{
+    background-color: #606060;
+}
+
+QPushButton:pressed{
+    background-color: #707070;
+}
+
+QComboBox {
+    background-color: #464646;
+    border: 1px solid #5d5d5d;
+    border-radius: 3px;
+    padding: 1px 18px 1px 3px;
+    min-width: 6em;
+}
+
+QComboBox:editable {
+    background: #464646;
+}
+
+QComboBox:!editable, QComboBox::drop-down:editable {
+     background: #464646;
+}
+
+/* QComboBox gets the "on" state when the popup is open */
+QComboBox:!editable:on, QComboBox::drop-down:editable:on {
+    background: #464646;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 15px;
+
+    border-left-width: 1px;
+    border-left-color: #5d5d5d;
+    border-left-style: solid; /* just a single line */
+    border-top-right-radius: 3px; /* same radius as the QComboBox */
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox QAbstractItemView {
+    border: 2px solid #5d5d5d;
+    selection-background-color: #505050;
+}
+
+QCheckBox::indicator {
+    width: 13px;
+    height: 13px;
+}
