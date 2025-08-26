@@ -36,7 +36,8 @@ class MainWindow(QMainWindow):
         root.addLayout(theme_row)
         theme_row.addWidget(QLabel("Theme:"))
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Light", "Dark", "Dark Colorful"])
+
+        self.theme_combo.addItems(["Light", "Dark", "Dark Colorful", "Wake Forest"])
         self.theme_combo.currentTextChanged.connect(self._change_theme)
         theme_row.addWidget(self.theme_combo)
         theme_row.addStretch(1)
@@ -306,7 +307,9 @@ class MainWindow(QMainWindow):
             qss_path = os.path.join(p, "dark_theme.qss")
         elif theme == "dark colorful":
             qss_path = os.path.join(p, "colorful_theme.qss")
-        else: # light theme
+        elif theme == "wake forest":
+            qss_path = os.path.join(p, "wake_forest_theme.qss")
+        else:  # light theme
             qss_path = ""
 
         if qss_path:

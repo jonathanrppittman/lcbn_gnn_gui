@@ -1,0 +1,97 @@
+/*
+ * Wake Forest Theme for Qt Applications
+ */
+
+QWidget{
+    background-color: #000000; /* Black */
+    color: #FFFFFF; /* White */
+    border-color: #9E7E38; /* Old Gold */
+}
+
+QToolTip {
+    background-color: #53565A; /* Cool Gray */
+    color: #FFFFFF; /* White */
+    padding: 5px;
+    border: 1px solid #9E7E38; /* Old Gold */
+    border-radius: 2px;
+    opacity: 230;
+}
+
+QTextEdit, QLineEdit, QListWidget {
+    background-color: #53565A; /* Cool Gray */
+    color: #FFFFFF; /* White */
+    border: 1px solid #9E7E38; /* Old Gold */
+    border-radius: 2px;
+}
+
+QPushButton{
+    background-color: #9E7E38; /* Old Gold */
+    color: #FFFFFF; /* White */
+    border: 1px solid #000000; /* Black */
+    padding: 5px;
+    border-radius: 2px;
+}
+
+QPushButton:hover{
+    background-color: #b39b6d;
+}
+
+QPushButton:pressed{
+    background-color: #8a6c2f;
+}
+
+QComboBox {
+    background-color: #53565A; /* Cool Gray */
+    border: 1px solid #9E7E38; /* Old Gold */
+    border-radius: 3px;
+    padding: 1px 18px 1px 3px;
+    min-width: 6em;
+    color: #FFFFFF; /* White */
+}
+
+QComboBox:editable {
+    background: #53565A; /* Cool Gray */
+}
+
+QComboBox:!editable, QComboBox::drop-down:editable {
+     background: #53565A; /* Cool Gray */
+}
+
+/* QComboBox gets the "on" state when the popup is open */
+QComboBox:!editable:on, QComboBox::drop-down:editable:on {
+    background: #53565A; /* Cool Gray */
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 15px;
+
+    border-left-width: 1px;
+    border-left-color: #9E7E38; /* Old Gold */
+    border-left-style: solid; /* just a single line */
+    border-top-right-radius: 3px; /* same radius as the QComboBox */
+    border-bottom-right-radius: 3px;
+}
+
+QComboBox QAbstractItemView {
+    border: 2px solid #9E7E38; /* Old Gold */
+    selection-background-color: #9E7E38; /* Old Gold */
+    background-color: #53565A; /* Cool Gray */
+    color: #FFFFFF; /* White */
+}
+
+QCheckBox::indicator {
+    width: 13px;
+    height: 13px;
+    border: 1px solid #9E7E38;
+    border-radius: 2px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #9E7E38; /* Old Gold */
+}
+
+QLabel {
+    color: #FFFFFF; /* White */
+}
