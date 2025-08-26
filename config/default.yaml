@@ -21,3 +21,5 @@ slurm:
   time: "02:00:00"
   additional: ""
   env_activation: ""  # e.g., source ~/.bashrc && conda activate gnn
+
+theme: "dark colorful"

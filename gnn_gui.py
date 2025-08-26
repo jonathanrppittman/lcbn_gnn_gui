@@ -1,24 +1,15 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow
 import sys
+import os
 
-class MainWindow(QMainWindow):
-    def __init__(self) -> None:
-        super().__init__()
+# Add src to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
-        self.setWindowTitle("GNN GUI")
+from PyQt5.QtWidgets import QApplication
+from ui.main_window import MainWindow
 
-# You need one (and only one) QApplication instance per application.
-# Pass in sys.argv to allow command line arguments for your app.
-# If you know you won't use command line arguments QApplication([]) works too.
-app: QApplication = QApplication(sys.argv)
-
-# Create a Qt widget, which will be our window.
-window: MainWindow = MainWindow()
-window.show()  # IMPORTANT!!!!! Windows are hidden by default.
-
-# Start the event loop.
-app.exec()
-
-
-# Your application won't reach here until you exit and the event
-# loop has stopped.
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = MainWindow()
+    w.resize(1000, 700)
+    w.show()
+    sys.exit(app.exec_())

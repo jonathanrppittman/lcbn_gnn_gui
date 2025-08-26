@@ -29,6 +29,17 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
 
+        # Theme switcher
+        theme_row = QHBoxLayout()
+        root.addLayout(theme_row)
+        theme_row.addWidget(QLabel("Theme:"))
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(["Light", "Dark", "Dark Colorful", "Wake Forest"])
+        self.theme_combo.currentTextChanged.connect(self._change_theme)
+        theme_row.addWidget(self.theme_combo)
+        theme_row.addStretch(1)
+        self._load_theme()
+
         # Conversion widgets
         conv_row = QHBoxLayout()
         root.addLayout(conv_row)
@@ -251,6 +262,35 @@ class MainWindow(QMainWindow):
         self.config["conversion"]["script_path"] = self.conv_script.text().strip()
         self.config["training"]["script_path"] = self.train_script.text().strip()
         save_config(self.config)
+
+    def _load_theme(self) -> None:
+        theme = self.config.get("theme", "dark colorful")
+        self.theme_combo.setCurrentText(theme.title())
+        self._apply_theme(theme)
+
+    def _change_theme(self, theme_name: str) -> None:
+        theme = theme_name.lower()
+        self._apply_theme(theme)
+        self.config["theme"] = theme
+        save_config(self.config)
+
+    def _apply_theme(self, theme: str) -> None:
+        p = os.path.dirname(__file__)
+        if theme == "dark":
+            qss_path = os.path.join(p, "dark_theme.qss")
+        elif theme == "dark colorful":
+            qss_path = os.path.join(p, "colorful_theme.qss")
+        elif theme == "wake forest":
+            qss_path = os.path.join(p, "wake_forest_theme.qss")
+        else:  # light theme
+            qss_path = ""
+
+        if qss_path:
+            with open(qss_path, "r") as f:
+                self.setStyleSheet(f.read())
+        else:
+            # Reset to default
+            self.setStyleSheet("")
 
 
 if __name__ == "__main__":
