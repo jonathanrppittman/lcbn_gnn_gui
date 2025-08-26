@@ -33,10 +33,12 @@ class MainWindow(QMainWindow):
         # Theme switcher
         theme_row = QHBoxLayout()
         root.addLayout(theme_row)
+        theme_row.addWidget(QLabel("Theme:"))
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(["Light", "Dark", "Dark Colorful"])
+        self.theme_combo.currentTextChanged.connect(self._change_theme)
+        theme_row.addWidget(self.theme_combo)
         theme_row.addStretch(1)
-        self.theme_toggle = QCheckBox("Dark Mode")
-        self.theme_toggle.toggled.connect(self._toggle_theme)
-        theme_row.addWidget(self.theme_toggle)
         self._load_theme()
 
         # Conversion widgets
@@ -329,20 +331,26 @@ class MainWindow(QMainWindow):
         save_config(self.config)
 
     def _load_theme(self) -> None:
-        is_dark = self.config.get("theme", "light") == "dark"
-        self.theme_toggle.setChecked(is_dark)
-        self._apply_theme(is_dark)
+        theme = self.config.get("theme", "dark colorful")
+        self.theme_combo.setCurrentText(theme.title())
+        self._apply_theme(theme)
 
-    def _toggle_theme(self, checked: bool) -> None:
-        self._apply_theme(checked)
-        self.config["theme"] = "dark" if checked else "light"
+    def _change_theme(self, theme_name: str) -> None:
+        theme = theme_name.lower()
+        self._apply_theme(theme)
+        self.config["theme"] = theme
         save_config(self.config)
 
-    def _apply_theme(self, dark: bool) -> None:
-        if dark:
-            # Load dark stylesheet
-            p = os.path.dirname(__file__)
+    def _apply_theme(self, theme: str) -> None:
+        p = os.path.dirname(__file__)
+        if theme == "dark":
             qss_path = os.path.join(p, "dark_theme.qss")
+        elif theme == "dark colorful":
+            qss_path = os.path.join(p, "colorful_theme.qss")
+        else: # light theme
+            qss_path = ""
+
+        if qss_path:
             with open(qss_path, "r") as f:
                 self.setStyleSheet(f.read())
         else:

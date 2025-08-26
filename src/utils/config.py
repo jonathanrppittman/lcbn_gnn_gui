@@ -24,7 +24,7 @@ _DEFAULT_CONFIG: Dict[str, Any] = {
         "additional": "",
         "env_activation": "",
     },
-    "theme": "light",
+    "theme": "dark colorful",
 }
 
 
