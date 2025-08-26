@@ -3,16 +3,16 @@
  */
 
 QWidget{
-    background-color: #000000; /* Black */
+    background-color: #222222; /* Black */
     color: #FFFFFF; /* White */
-    border-color: #9E7E38; /* Old Gold */
+    border-color: #8C6D2C; /* Old Gold */
 }
 
 QToolTip {
     background-color: #53565A; /* Cool Gray */
     color: #FFFFFF; /* White */
     padding: 5px;
-    border: 1px solid #9E7E38; /* Old Gold */
+    border: 1px solid #8C6D2C; /* Old Gold */
     border-radius: 2px;
     opacity: 230;
 }
@@ -20,14 +20,14 @@ QToolTip {
 QTextEdit, QLineEdit, QListWidget {
     background-color: #53565A; /* Cool Gray */
     color: #FFFFFF; /* White */
-    border: 1px solid #9E7E38; /* Old Gold */
+    border: 1px solid #8C6D2C; /* Old Gold */
     border-radius: 2px;
 }
 
 QPushButton{
     background-color: #9E7E38; /* Old Gold */
     color: #FFFFFF; /* White */
-    border: 1px solid #000000; /* Black */
+    border: 1px solid #222222; /* Black */
     padding: 5px;
     border-radius: 2px;
 }
@@ -42,7 +42,7 @@ QPushButton:pressed{
 
 QComboBox {
     background-color: #53565A; /* Cool Gray */
-    border: 1px solid #9E7E38; /* Old Gold */
+    border: 1px solid #8C6D2C; /* Old Gold */
     border-radius: 3px;
     padding: 1px 18px 1px 3px;
     min-width: 6em;
@@ -68,15 +68,15 @@ QComboBox::drop-down {
     width: 15px;
 
     border-left-width: 1px;
-    border-left-color: #9E7E38; /* Old Gold */
+    border-left-color: #8C6D2C; /* Old Gold */
     border-left-style: solid; /* just a single line */
     border-top-right-radius: 3px; /* same radius as the QComboBox */
     border-bottom-right-radius: 3px;
 }
 
 QComboBox QAbstractItemView {
-    border: 2px solid #9E7E38; /* Old Gold */
-    selection-background-color: #9E7E38; /* Old Gold */
+    border: 2px solid #8C6D2C; /* Old Gold */
+    selection-background-color: #8C6D2C; /* Old Gold */
     background-color: #53565A; /* Cool Gray */
     color: #FFFFFF; /* White */
 }
@@ -84,12 +84,12 @@ QComboBox QAbstractItemView {
 QCheckBox::indicator {
     width: 13px;
     height: 13px;
-    border: 1px solid #9E7E38;
+    border: 1px solid #8C6D2C;
     border-radius: 2px;
 }
 
 QCheckBox::indicator:checked {
-    background-color: #9E7E38; /* Old Gold */
+    background-color: #8C6D2C; /* Old Gold */
 }
 
 QLabel {
