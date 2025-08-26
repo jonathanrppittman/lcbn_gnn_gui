@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/isilon/datalake/lcbn_research/final/beach/JonathanP/lcbn_gnn_gui/src/utils/NCandaToTorchGraphDataGUITest.py", line 1, in <module>
+    import scipy
+ModuleNotFoundError: No module named 'scipy'

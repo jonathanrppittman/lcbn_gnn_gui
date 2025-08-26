@@ -3,13 +3,15 @@ import os
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QFileDialog, QMessageBox, QApplication,
     QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit,
-    QLabel, QComboBox, QTextEdit, QCheckBox
+    QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox
 )
 from PyQt5.QtCore import Qt
 
 from utils.config import load_config, save_config
 from utils.process_runner import CommandRunner
-from utils.slurm import write_job_script, submit_job
+import shlex
+from utils.slurm import write_job_script_from_template, submit_job, write_job_script
+from ui.slurm_config_widget import SlurmConfigWidget
 
 
 def _detect_interpreter(script_path: str) -> str:
@@ -34,6 +36,7 @@ class MainWindow(QMainWindow):
         root.addLayout(theme_row)
         theme_row.addWidget(QLabel("Theme:"))
         self.theme_combo = QComboBox()
+
         self.theme_combo.addItems(["Light", "Dark", "Dark Colorful", "Wake Forest"])
         self.theme_combo.currentTextChanged.connect(self._change_theme)
         theme_row.addWidget(self.theme_combo)
@@ -70,14 +73,23 @@ class MainWindow(QMainWindow):
 
         files_row = QHBoxLayout()
         root.addLayout(files_row)
+
+        inputs_col = QVBoxLayout()
+        files_row.addLayout(inputs_col)
+        inputs_col.addWidget(QLabel("Input Files:"))
         self.files_list = QListWidget()
-        files_row.addWidget(self.files_list)
+        inputs_col.addWidget(self.files_list)
+
+        labels_col = QVBoxLayout()
+        files_row.addLayout(labels_col)
+        labels_col.addWidget(QLabel("Label File(s):"))
         self.labels_list = QListWidget()
-        files_row.addWidget(self.labels_list)
+        labels_col.addWidget(self.labels_list)
 
         actions_row = QHBoxLayout()
         root.addLayout(actions_row)
         self.use_slurm_conversion = QCheckBox("Submit with SLURM (sbatch)")
+        self.use_slurm_conversion.toggled.connect(self._update_slurm_visibility)
         actions_row.addWidget(self.use_slurm_conversion)
         actions_row.addStretch(1)
         self.btn_convert = QPushButton("Convert to .pt")
@@ -113,10 +125,19 @@ class MainWindow(QMainWindow):
         self.train_args = QLineEdit(self.config["training"]["default_args"])
         train_row3.addWidget(self.train_args, 1)
 
+        # Slurm config
+        self.slurm_group = QGroupBox("SLURM Configuration")
+        slurm_layout = QVBoxLayout(self.slurm_group)
+        self.slurm_config_widget = SlurmConfigWidget(self.config)
+        slurm_layout.addWidget(self.slurm_config_widget)
+        root.addWidget(self.slurm_group)
+        self.slurm_group.setVisible(False)
+
         slurm_row = QHBoxLayout()
         root.addLayout(slurm_row)
         self.use_slurm = QCheckBox("Submit with SLURM (sbatch)")
         self.use_slurm.setChecked(self.config["slurm"].get("use_slurm_by_default", False))
+        self.use_slurm.toggled.connect(self._update_slurm_visibility)
         slurm_row.addWidget(self.use_slurm)
         self.btn_train = QPushButton("Run Training")
         self.btn_train.clicked.connect(self._run_training)
@@ -131,7 +152,13 @@ class MainWindow(QMainWindow):
         # Persist on close
         self.destroyed.connect(self._persist_config)
 
+        self._update_slurm_visibility()
+
     # ------------- UI Handlers -------------
+    def _update_slurm_visibility(self) -> None:
+        should_be_visible = self.use_slurm.isChecked() or self.use_slurm_conversion.isChecked()
+        self.slurm_group.setVisible(should_be_visible)
+
     def _pick_conv_script(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Select conversion script")
         if path:
@@ -209,7 +236,7 @@ class MainWindow(QMainWindow):
             script_path = write_job_script(command, self.config)
             result = submit_job(script_path)
             if result.returncode == 0:
-                self._append_console(f"Submitted: {result.stdout}")
+                self._append_console(f"Submitted job: {result.stdout}")
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
