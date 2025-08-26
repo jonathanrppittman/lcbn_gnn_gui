@@ -1,25 +1,24 @@
-workspace_dir: "."  # Current directory (repository root)
-jobs_dir: "./jobs"  # Relative to repository root
-logs_dir: "./logs"  # Relative to repository root
-
+workspace_dir: .
+jobs_dir: ./jobs
+logs_dir: ./logs
 conversion:
-  script_path: ""
-  default_args: "--inputs {inputs} --labels {labels} --output {output_dir}"
-
+  script_path: ''
+  default_args: --inputs {inputs} --labels {labels} --output {output_dir}
 training:
-  script_path: ""
-  default_args: "--data {dataset_dir} --model {model}"
-
+  script_path: ''
+  default_args: --data {dataset_dir} --model {model}
 slurm:
   use_slurm_by_default: false
-  account: ""
-  partition: ""
-  qos: ""
+  account: ''
+  partition: ''
+  qos: ''
   gpus: 1
   cpus: 4
+
   mem: "16G"
   time: "02:00:00"
   additional: ""
   env_activation: ""  # e.g., source ~/.bashrc && conda activate gnn
 
 theme: "dark colorful"
+
