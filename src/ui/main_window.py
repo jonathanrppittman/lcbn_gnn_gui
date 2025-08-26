@@ -3,14 +3,15 @@ import os
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QFileDialog, QMessageBox, QApplication,
     QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit,
-    QLabel, QComboBox, QTextEdit, QCheckBox
+    QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox
 )
 from PyQt5.QtCore import Qt
 
 from utils.config import load_config, save_config
 from utils.process_runner import CommandRunner
 import shlex
-from utils.slurm import write_job_script_from_template, submit_job
+from utils.slurm import write_job_script_from_template, submit_job, write_job_script
+from ui.slurm_config_widget import SlurmConfigWidget
 
 
 def _detect_interpreter(script_path: str) -> str:
@@ -87,6 +88,7 @@ class MainWindow(QMainWindow):
         actions_row = QHBoxLayout()
         root.addLayout(actions_row)
         self.use_slurm_conversion = QCheckBox("Submit with SLURM (sbatch)")
+        self.use_slurm_conversion.toggled.connect(self._update_slurm_visibility)
         actions_row.addWidget(self.use_slurm_conversion)
         actions_row.addStretch(1)
         self.btn_convert = QPushButton("Convert to .pt")
@@ -122,10 +124,19 @@ class MainWindow(QMainWindow):
         self.train_args = QLineEdit(self.config["training"]["default_args"])
         train_row3.addWidget(self.train_args, 1)
 
+        # Slurm config
+        self.slurm_group = QGroupBox("SLURM Configuration")
+        slurm_layout = QVBoxLayout(self.slurm_group)
+        self.slurm_config_widget = SlurmConfigWidget(self.config)
+        slurm_layout.addWidget(self.slurm_config_widget)
+        root.addWidget(self.slurm_group)
+        self.slurm_group.setVisible(False)
+
         slurm_row = QHBoxLayout()
         root.addLayout(slurm_row)
         self.use_slurm = QCheckBox("Submit with SLURM (sbatch)")
         self.use_slurm.setChecked(self.config["slurm"].get("use_slurm_by_default", False))
+        self.use_slurm.toggled.connect(self._update_slurm_visibility)
         slurm_row.addWidget(self.use_slurm)
         self.btn_train = QPushButton("Run Training")
         self.btn_train.clicked.connect(self._run_training)
@@ -140,7 +151,13 @@ class MainWindow(QMainWindow):
         # Persist on close
         self.destroyed.connect(self._persist_config)
 
+        self._update_slurm_visibility()
+
     # ------------- UI Handlers -------------
+    def _update_slurm_visibility(self) -> None:
+        should_be_visible = self.use_slurm.isChecked() or self.use_slurm_conversion.isChecked()
+        self.slurm_group.setVisible(should_be_visible)
+
     def _pick_conv_script(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Select conversion script")
         if path:
@@ -215,65 +232,7 @@ class MainWindow(QMainWindow):
         command = f"{_detect_interpreter(script)} {args_filled}".strip()
 
         if self.use_slurm_conversion.isChecked():
-            template_path = self.conv_script.text().strip()
-            if not os.path.exists(template_path):
-                QMessageBox.warning(self, "Template not found", f"The script template file does not exist: {template_path}")
-                return
-
-            with open(template_path, 'r') as f:
-                py_script_lines = [line for line in f.readlines() if 'python' in line and not line.strip().startswith("#")]
-                if not py_script_lines:
-                    QMessageBox.warning(self, "No command found", f"Could not find a python command in the template script: {template_path}")
-                    return
-                py_command_line = py_script_lines[0].strip()
-
-            parts = shlex.split(py_command_line)
-
-            script_idx = -1
-            for j, part in enumerate(parts):
-                if ".py" in part:
-                    script_idx = j
-                    break
-
-            if script_idx == -1:
-                QMessageBox.warning(self, "Invalid template", "Could not find a python script in the template's command.")
-                return
-
-            command_prefix = parts[:script_idx+1]
-            template_args = parts[script_idx+1:]
-
-            arg_dict = {}
-            i = 0
-            while i < len(template_args):
-                arg = template_args[i]
-                if arg.startswith("--"):
-                    if i + 1 < len(template_args) and not template_args[i+1].startswith("--"):
-                        arg_dict[arg] = template_args[i+1]
-                        i += 2
-                    else:
-                        arg_dict[arg] = True
-                        i += 1
-                else:
-                    # Should not happen with well-formed arguments
-                    i += 1
-
-            input_files: List[str] = [self.files_list.item(i).text() for i in range(self.files_list.count())]
-            inputs_str = " ".join(f'"{p}"' for p in input_files)
-            label_files: List[str] = [self.labels_list.item(i).text() for i in range(self.labels_list.count())]
-            labels_str = " ".join(f'"{p}"' for p in label_files)
-            arg_dict["--inputs"] = inputs_str
-            arg_dict["--labels"] = labels_str
-            arg_dict["--output_dir"] = out_dir
-
-            final_args = []
-            for key, val in arg_dict.items():
-                final_args.append(key)
-                if val is not True:
-                    final_args.append(val)
-
-            command = " ".join(command_prefix + final_args)
-
-            script_path = write_job_script_from_template(command, template_path, self.config)
+            script_path = write_job_script(command, self.config)
             result = submit_job(script_path)
             if result.returncode == 0:
                 self._append_console(f"Submitted job: {result.stdout}")
