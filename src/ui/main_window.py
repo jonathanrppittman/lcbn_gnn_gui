@@ -9,8 +9,7 @@ from PyQt5.QtCore import Qt
 
 from utils.config import load_config, save_config
 from utils.process_runner import CommandRunner
-import shlex
-from utils.slurm import write_job_script_from_template, submit_job, write_job_script
+from utils.slurm import submit_job, write_job_script
 from ui.slurm_config_widget import SlurmConfigWidget
 
 

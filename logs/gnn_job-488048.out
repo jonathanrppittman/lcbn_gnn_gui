@@ -1,0 +1,2 @@
+/isilon/datalake/lcbn_research/final/software/LCBN/miniconda3/envs/NeuroGraph/bin/python: can't open file '/isilon/datalake/lcbn_research/final/beach/JonathanP/NCandaToTorchGraphDataGUITest.py': [Errno 2] No such file or directory
+srun: error: demon096: task 0: Exited with exit code 2
