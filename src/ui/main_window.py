@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt
 from utils.config import load_config, save_config
 from utils.process_runner import CommandRunner
 import shlex
-from utils.slurm import write_job_script_from_template, submit_job, write_job_script
+from utils.slurm import update_slurm_script, submit_job
 from ui.slurm_config_widget import SlurmConfigWidget
 
 
@@ -233,7 +233,7 @@ class MainWindow(QMainWindow):
         command = f"{_detect_interpreter(script)} {args_filled}".strip()
 
         if self.use_slurm_conversion.isChecked():
-            script_path = write_job_script(command, self.config)
+            script_path = update_slurm_script(command, self.config)
             result = submit_job(script_path)
             if result.returncode == 0:
                 self._append_console(f"Submitted job: {result.stdout}")
@@ -256,7 +256,7 @@ class MainWindow(QMainWindow):
         args_filled = self._format_args(args_template, {"dataset_dir": f'"{dataset}"', "model": model})
         command = f"{_detect_interpreter(script)} {args_filled}".strip()
         if self.use_slurm.isChecked():
-            script_path = write_job_script(command, self.config)
+            script_path = update_slurm_script(command, self.config)
             result = submit_job(script_path)
             if result.returncode == 0:
                 self._append_console(f"Submitted: {result.stdout}")
