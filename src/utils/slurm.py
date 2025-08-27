@@ -1,21 +1,21 @@
 import os
-import datetime as _dt
 import subprocess
 from typing import Dict, Any, List
 import re
 
 
-def write_job_script(command: str, cfg: Dict[str, Any]) -> str:
+def update_slurm_script(command: str, cfg: Dict[str, Any]) -> str:
     """
-    Creates a SLURM job script from a template file, replacing SBATCH directives
-    and the python command based on the provided configuration.
+    Updates the specified SLURM script file with SBATCH directives and the
+    python command from the provided configuration. This function overwrites the script.
     """
+    script_path = "src/utils/MakeTorchGraphData.sh"
     slurm_cfg = cfg.get("slurm", {})
-    template_path = slurm_cfg.get("template_path")
-    if not template_path or not os.path.exists(template_path):
-        raise FileNotFoundError(f"SLURM template script not found at: {template_path}")
 
-    with open(template_path, "r") as f:
+    if not os.path.exists(script_path):
+        raise FileNotFoundError(f"SLURM script not found at: {script_path}")
+
+    with open(script_path, "r") as f:
         template_lines = f.readlines()
 
     # Mapping from config key to SBATCH directive
@@ -43,7 +43,7 @@ def write_job_script(command: str, cfg: Dict[str, Any]) -> str:
                 pattern = re.compile(rf"(#SBATCH\s+{re.escape(sbatch_key)})(?:[=\s])(.*)")
                 match = pattern.match(stripped_line)
                 if match:
-                    if cfg_key in slurm_cfg:
+                    if cfg_key in slurm_cfg and slurm_cfg[cfg_key]:
                         new_value = slurm_cfg[cfg_key]
                         new_lines.append(f"{match.group(1)} {new_value}\n")
                         found_match = True
@@ -52,7 +52,6 @@ def write_job_script(command: str, cfg: Dict[str, Any]) -> str:
                 new_lines.append(line)  # Keep original line if no config override
         elif "python" in stripped_line and not stripped_line.startswith("#"):
             # Replace the python command execution line
-            # We assume the command includes 'srun' or similar, which is replaced entirely.
             new_lines.append(f"srun {command}\n")
             python_cmd_replaced = True
         else:
@@ -62,26 +61,14 @@ def write_job_script(command: str, cfg: Dict[str, Any]) -> str:
     if not python_cmd_replaced:
         new_lines.append(f"\nsrun {command}\n")
 
-    # Add env activation if specified
-    if slurm_cfg.get("env_activation"):
-        # Insert before the command
-        for i, line in enumerate(new_lines):
-            if "srun" in line:
-                new_lines.insert(i, f'{slurm_cfg["env_activation"]}\n')
-                break
-
     content = "".join(new_lines)
 
-    jobs_dir = cfg.get("jobs_dir", "./jobs")
-    os.makedirs(jobs_dir, exist_ok=True)
-    stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    job_name = slurm_cfg.get("job_name", "gnn_job")
-    path = os.path.join(jobs_dir, f"{job_name}_{stamp}.sh")
-
-    with open(path, "w", encoding="utf-8") as f:
+    # Overwrite the original script
+    with open(script_path, "w", encoding="utf-8") as f:
         f.write(content)
-    os.chmod(path, 0o750)
-    return path
+    os.chmod(script_path, 0o750)
+
+    return script_path
 
 
 def submit_job(script_path: str) -> subprocess.CompletedProcess:
