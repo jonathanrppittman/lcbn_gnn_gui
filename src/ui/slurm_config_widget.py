@@ -45,7 +45,7 @@ class SlurmConfigWidget(QWidget):
         self.qos.setText(slurm_config.get("qos", ""))
         self.gpus.setValue(int(slurm_config.get("gpus", 2)))
         self.mem.setText(slurm_config.get("mem", "700000M"))
-        self.time.setText(str(slurm_config.get("time", "24:00:00")))
+        self.time.setText(slurm_config.get("time", "24:00:00"))
         self.additional.setText(slurm_config.get("additional", ""))
         self.env_activation.setText(slurm_config.get("env_activation", ""))
 
