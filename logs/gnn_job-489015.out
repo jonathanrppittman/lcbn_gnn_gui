@@ -1,0 +1,7 @@
+usage: NCandaToTorchGraphDataGUITest.py [-h] --inputs INPUTS [INPUTS ...]
+                                        --labels LABELS --output_dir
+                                        OUTPUT_DIR [--num_labels NUM_LABELS]
+                                        [--label_column LABEL_COLUMN]
+                                        [--threshold THRESHOLD]
+NCandaToTorchGraphDataGUITest.py: error: the following arguments are required: --inputs, --labels, --output_dir
+srun: error: demon097: task 0: Exited with exit code 2
