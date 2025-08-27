@@ -18,7 +18,8 @@ slurm:
   qos: ''
   gpus: 2
   mem: 700000M
-  time: 24:00:00
+  time: 86400
   additional: ''
   env_activation: ''
+  cpus: 4
 theme: wake forest
