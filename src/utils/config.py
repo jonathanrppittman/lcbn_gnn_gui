@@ -20,7 +20,7 @@ _DEFAULT_CONFIG: Dict[str, Any] = {
         "gpus": 1,
         "cpus": 4,
         "mem": "16G",
-        "time": "02:00:00",
+        "time": "24:00:00",
         "additional": "",
         "env_activation": "",
     },
