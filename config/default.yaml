@@ -9,13 +9,15 @@ training:
   default_args: --data {dataset_dir} --model {model}
 slurm:
   use_slurm_by_default: false
+  job_name: MakeTorchGraphData
+  output: /isilon/datalake/lcbn_research/final/beach/JonathanP/MakeTorchGraphDataOutput.txt
+  error: /isilon/datalake/lcbn_research/final/beach/JonathanP/MakeTorchGraphDataError.txt
   account: ''
-  partition: ''
+  partition: gpu-h100
   qos: ''
-  gpus: 1
-  cpus: 4
-  mem: 16G
-  time: 02:00:00
+  gpus: 2
+  mem: 700000M
+  time: 24:00:00
   additional: ''
   env_activation: ''
 theme: wake forest
