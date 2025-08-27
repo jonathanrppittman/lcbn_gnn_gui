@@ -2,13 +2,14 @@ workspace_dir: .
 jobs_dir: ./jobs
 logs_dir: ./logs
 conversion:
-  script_path: ''
+  script_path: src/utils/NCandaToTorchGraphDataGUITest.py
   default_args: --inputs {inputs} --labels {labels} --output {output_dir}
 training:
   script_path: ''
   default_args: --data {dataset_dir} --model {model}
 slurm:
   use_slurm_by_default: false
+  template_path: src/utils/MakeTorchGraphData.sh
   job_name: MakeTorchGraphData
   output: /isilon/datalake/lcbn_research/final/beach/JonathanP/MakeTorchGraphDataOutput.txt
   error: /isilon/datalake/lcbn_research/final/beach/JonathanP/MakeTorchGraphDataError.txt
