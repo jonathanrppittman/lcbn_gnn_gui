@@ -89,7 +89,7 @@ QCheckBox::indicator {
 }
 
 QCheckBox::indicator:checked {
-    image: url(https://api.iconify.design/material-symbols/check-small.svg?color=white);
+    background-color: #8C6D2C; /* Old Gold */
 }
 
 QLabel {
