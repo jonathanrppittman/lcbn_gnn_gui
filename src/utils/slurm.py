@@ -1,4 +1,5 @@
 import os
+import shlex
 import subprocess
 from typing import Dict, Any, List
 import re
@@ -68,11 +69,14 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
         # Only append lines that are not part of the old command block
         final_lines.append(line)
 
-    # Append the new command at the end of the script
-    # Ensure there's a newline before it if the script isn't empty
+    # Append the new command at the end of the script, formatted to be multi-line
     if final_lines and not final_lines[-1].endswith('\n'):
         final_lines.append('\n')
-    final_lines.append(f"srun {command}\n")
+
+    parts = ["srun"] + shlex.split(command)
+    multiline_command = " \\\n    ".join(parts)
+    final_lines.append(multiline_command + "\n")
+
 
     content = "".join(final_lines)
 
