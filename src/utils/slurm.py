@@ -4,14 +4,11 @@ from typing import Dict, Any, List
 import re
 
 
-def update_slurm_script(command: str, cfg: Dict[str, Any]) -> str:
+def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any]) -> str:
     """
     Updates the specified SLURM script file with SBATCH directives and the
     python command from the provided configuration. This function overwrites the script.
     """
-    script_path = "src/utils/MakeTorchGraphData.sh"
-    slurm_cfg = cfg.get("slurm", {})
-
     if not os.path.exists(script_path):
         raise FileNotFoundError(f"SLURM script not found at: {script_path}")
 

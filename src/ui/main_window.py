@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox
 )
 from PyQt5.QtCore import Qt
+import re
 
 from utils.config import load_config, save_config
 from utils.process_runner import CommandRunner
@@ -89,6 +90,7 @@ class MainWindow(QMainWindow):
         actions_row = QHBoxLayout()
         root.addLayout(actions_row)
         self.use_slurm_conversion = QCheckBox("Submit with SLURM (sbatch)")
+        self.use_slurm_conversion.setChecked(self.config.get("slurm_conversion", {}).get("use_slurm_by_default", False))
         self.use_slurm_conversion.toggled.connect(self._update_slurm_visibility)
         actions_row.addWidget(self.use_slurm_conversion)
         actions_row.addStretch(1)
@@ -125,18 +127,26 @@ class MainWindow(QMainWindow):
         self.train_args = QLineEdit(self.config["training"]["default_args"])
         train_row3.addWidget(self.train_args, 1)
 
-        # Slurm config
-        self.slurm_group = QGroupBox("SLURM Configuration")
-        slurm_layout = QVBoxLayout(self.slurm_group)
-        self.slurm_config_widget = SlurmConfigWidget(self.config)
-        slurm_layout.addWidget(self.slurm_config_widget)
-        root.addWidget(self.slurm_group)
-        self.slurm_group.setVisible(False)
+        # Slurm config for conversion
+        self.slurm_conversion_group = QGroupBox("SLURM Configuration for Conversion")
+        slurm_conversion_layout = QVBoxLayout(self.slurm_conversion_group)
+        self.slurm_conversion_config_widget = SlurmConfigWidget(self.config, "slurm_conversion")
+        slurm_conversion_layout.addWidget(self.slurm_conversion_config_widget)
+        root.addWidget(self.slurm_conversion_group)
+        self.slurm_conversion_group.setVisible(False)
+
+        # Slurm config for training
+        self.slurm_training_group = QGroupBox("SLURM Configuration for Training")
+        slurm_training_layout = QVBoxLayout(self.slurm_training_group)
+        self.slurm_training_config_widget = SlurmConfigWidget(self.config, "slurm_training")
+        slurm_training_layout.addWidget(self.slurm_training_config_widget)
+        root.addWidget(self.slurm_training_group)
+        self.slurm_training_group.setVisible(False)
 
         slurm_row = QHBoxLayout()
         root.addLayout(slurm_row)
         self.use_slurm = QCheckBox("Submit with SLURM (sbatch)")
-        self.use_slurm.setChecked(self.config["slurm"].get("use_slurm_by_default", False))
+        self.use_slurm.setChecked(self.config.get("slurm_training", {}).get("use_slurm_by_default", False))
         self.use_slurm.toggled.connect(self._update_slurm_visibility)
         slurm_row.addWidget(self.use_slurm)
         self.btn_train = QPushButton("Run Training")
@@ -156,8 +166,8 @@ class MainWindow(QMainWindow):
 
     # ------------- UI Handlers -------------
     def _update_slurm_visibility(self) -> None:
-        should_be_visible = self.use_slurm.isChecked() or self.use_slurm_conversion.isChecked()
-        self.slurm_group.setVisible(should_be_visible)
+        self.slurm_conversion_group.setVisible(self.use_slurm_conversion.isChecked())
+        self.slurm_training_group.setVisible(self.use_slurm.isChecked())
 
     def _pick_conv_script(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Select conversion script")
@@ -235,13 +245,15 @@ class MainWindow(QMainWindow):
         command = f"{_detect_interpreter(script)} {args_filled}".strip()
 
         if self.use_slurm_conversion.isChecked():
-            script_path = update_slurm_script(command, self.config)
+            slurm_config = self.config.get("slurm_conversion", {})
+            script_path = update_slurm_script("src/utils/MakeTorchGraphData.sh", command, slurm_config)
             result = submit_job(script_path)
             if result.returncode == 0:
                 self._append_console(f"Submitted job: {result.stdout}")
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
+            command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
 
     def _run_training(self) -> None:
@@ -253,18 +265,47 @@ class MainWindow(QMainWindow):
         if not dataset:
             QMessageBox.warning(self, "Missing dataset", "Please select a dataset file (.pt).")
             return
-        model = self.model_combo.currentText()
-        args_template = self.train_args.text().strip() or self.config["training"].get("default_args", "")
-        args_filled = self._format_args(args_template, {"dataset_dir": f'"{dataset}"', "model": model})
-        command = f"{_detect_interpreter(script)} {args_filled}".strip()
+
+        model_map = {
+            "GCN": "GCNConv",
+            "GAT": "GATConv",
+            "GATv2": "GATv2Conv",
+            "GraphSAGE": "SAGEConv",
+            "GTransformer": "TransformerConv",
+        }
+        model_display_name = self.model_combo.currentText()
+        model_script_name = model_map.get(model_display_name, model_display_name)
+
+        args_text = self.train_args.text().strip() or self.config["training"].get("default_args", "")
+
+        # Handle the model argument separately
+        if "{model}" in args_text:
+            args_text = args_text.replace("{model}", f'"{model_script_name}"')
+        else:
+            # If --model is already present, replace its value. Otherwise, add it.
+            model_arg_pattern = re.compile(r'(--model\s+)(?:"[^"]*"|\'[^\']*\'|\S+)')
+            if model_arg_pattern.search(args_text):
+                args_text = model_arg_pattern.sub(rf'\1"{model_script_name}"', args_text)
+            else:
+                args_text += f' --model "{model_script_name}"'
+
+        args_filled = self._format_args(args_text, {"dataset_dir": f'"{dataset}"'})
+
+        # If using SLURM, the command to run is a python script inside the sbatch script.
+        # Otherwise, it's the script from the input field.
         if self.use_slurm.isChecked():
-            script_path = update_slurm_script(command, self.config)
+            # TODO: Make the python script name configurable
+            python_script = "main_NCanda.py"
+            command = f"python {python_script} {args_filled}".strip()
+            slurm_config = self.config.get("slurm_training", {})
+            script_path = update_slurm_script(script, command, slurm_config)
             result = submit_job(script_path)
             if result.returncode == 0:
                 self._append_console(f"Submitted: {result.stdout}")
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
+            command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
 
     # ------------- Runner -------------
@@ -290,6 +331,12 @@ class MainWindow(QMainWindow):
     def _persist_config(self) -> None:
         self.config["conversion"]["script_path"] = self.conv_script.text().strip()
         self.config["training"]["script_path"] = self.train_script.text().strip()
+        if "slurm_conversion" not in self.config:
+            self.config["slurm_conversion"] = {}
+        self.config["slurm_conversion"]["use_slurm_by_default"] = self.use_slurm_conversion.isChecked()
+        if "slurm_training" not in self.config:
+            self.config["slurm_training"] = {}
+        self.config["slurm_training"]["use_slurm_by_default"] = self.use_slurm.isChecked()
         save_config(self.config)
 
     def _load_theme(self) -> None:
