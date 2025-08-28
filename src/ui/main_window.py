@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox
 )
 from PyQt5.QtCore import Qt
+import re
 
 from utils.config import load_config, save_config
 from utils.process_runner import CommandRunner
@@ -275,9 +276,20 @@ class MainWindow(QMainWindow):
         model_display_name = self.model_combo.currentText()
         model_script_name = model_map.get(model_display_name, model_display_name)
 
-        args_template = self.train_args.text().strip() or self.config["training"].get("default_args", "")
-        args_filled = self._format_args(args_template, {"dataset_dir": f'"{dataset}"', "model": model_script_name})
+        args_text = self.train_args.text().strip() or self.config["training"].get("default_args", "")
 
+        # Handle the model argument separately
+        if "{model}" in args_text:
+            args_text = args_text.replace("{model}", f'"{model_script_name}"')
+        else:
+            # If --model is already present, replace its value. Otherwise, add it.
+            model_arg_pattern = re.compile(r'(--model\s+)(?:"[^"]*"|\'[^\']*\'|\S+)')
+            if model_arg_pattern.search(args_text):
+                args_text = model_arg_pattern.sub(rf'\1"{model_script_name}"', args_text)
+            else:
+                args_text += f' --model "{model_script_name}"'
+
+        args_filled = self._format_args(args_text, {"dataset_dir": f'"{dataset}"'})
         # If using SLURM, the command to run is a python script inside the sbatch script.
         # Otherwise, it's the script from the input field.
         if self.use_slurm.isChecked():
