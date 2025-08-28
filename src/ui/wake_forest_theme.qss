@@ -84,14 +84,8 @@ QComboBox QAbstractItemView {
 QCheckBox::indicator {
     width: 13px;
     height: 13px;
-    border: 1px solid #8C6D2C;
-    border-radius: 2px;
-    background-color: #222222;
 }
 
-QCheckBox::indicator:checked {
-    background-color: #8C6D2C; /* Old Gold */
-}
 
 QLabel {
     color: #FFFFFF; /* White */
