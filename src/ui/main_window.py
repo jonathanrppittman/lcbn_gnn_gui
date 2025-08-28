@@ -252,6 +252,7 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
+            command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
 
     def _run_training(self) -> None:
@@ -263,19 +264,35 @@ class MainWindow(QMainWindow):
         if not dataset:
             QMessageBox.warning(self, "Missing dataset", "Please select a dataset file (.pt).")
             return
-        model = self.model_combo.currentText()
+
+        model_map = {
+            "GCN": "GCNConv",
+            "GAT": "GATConv",
+            "GATv2": "GATv2Conv",
+            "GraphSAGE": "SAGEConv",
+            "GTransformer": "TransformerConv",
+        }
+        model_display_name = self.model_combo.currentText()
+        model_script_name = model_map.get(model_display_name, model_display_name)
+
         args_template = self.train_args.text().strip() or self.config["training"].get("default_args", "")
-        args_filled = self._format_args(args_template, {"dataset_dir": f'"{dataset}"', "model": model})
-        command = f"{_detect_interpreter(script)} {args_filled}".strip()
+        args_filled = self._format_args(args_template, {"dataset_dir": f'"{dataset}"', "model": model_script_name})
+
+        # If using SLURM, the command to run is a python script inside the sbatch script.
+        # Otherwise, it's the script from the input field.
         if self.use_slurm.isChecked():
+            # TODO: Make the python script name configurable
+            python_script = "main_NCanda.py"
+            command = f"python {python_script} {args_filled}".strip()
             slurm_config = self.config.get("slurm_training", {})
-            script_path = update_slurm_script(self.train_script.text().strip(), command, slurm_config)
+            script_path = update_slurm_script(script, command, slurm_config)
             result = submit_job(script_path)
             if result.returncode == 0:
                 self._append_console(f"Submitted: {result.stdout}")
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
+            command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
 
     # ------------- Runner -------------
