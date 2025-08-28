@@ -108,11 +108,11 @@ class MainWindow(QMainWindow):
 
         train_row2 = QHBoxLayout()
         root.addLayout(train_row2)
-        train_row2.addWidget(QLabel("Dataset dir (.pt):"))
-        self.dataset_dir = QLineEdit("")
-        train_row2.addWidget(self.dataset_dir, 1)
+        train_row2.addWidget(QLabel("Dataset file (.pt):"))
+        self.dataset_file_input = QLineEdit("")
+        train_row2.addWidget(self.dataset_file_input, 1)
         btn_ds = QPushButton("Browse")
-        btn_ds.clicked.connect(self._pick_dataset_dir)
+        btn_ds.clicked.connect(self._pick_dataset_file)
         train_row2.addWidget(btn_ds)
 
         train_row3 = QHBoxLayout()
@@ -195,10 +195,12 @@ class MainWindow(QMainWindow):
         if path:
             self.train_script.setText(path)
 
-    def _pick_dataset_dir(self) -> None:
-        d = QFileDialog.getExistingDirectory(self, "Select dataset directory (.pt files)")
-        if d:
-            self.dataset_dir.setText(d)
+    def _pick_dataset_file(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select dataset file", filter="PyTorch data (*.pt);;All files (*)"
+        )
+        if path:
+            self.dataset_file_input.setText(path)
 
     # ------------- Command builders -------------
     def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
@@ -247,9 +249,9 @@ class MainWindow(QMainWindow):
         if not script:
             QMessageBox.warning(self, "Missing script", "Please select a training script.")
             return
-        dataset = self.dataset_dir.text().strip()
+        dataset = self.dataset_file_input.text().strip()
         if not dataset:
-            QMessageBox.warning(self, "Missing dataset", "Please select a dataset directory containing .pt files.")
+            QMessageBox.warning(self, "Missing dataset", "Please select a dataset file (.pt).")
             return
         model = self.model_combo.currentText()
         args_template = self.train_args.text().strip() or self.config["training"].get("default_args", "")
