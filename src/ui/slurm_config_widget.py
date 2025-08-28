@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import QWidget, QLineEdit, QSpinBox, QFormLayout, QLabel, QComboBox
 
 class SlurmConfigWidget(QWidget):
-    def __init__(self, config, parent=None):
+    def __init__(self, config, config_key="slurm", parent=None):
         super().__init__(parent)
         self.config = config
+        self.config_key = config_key
 
         layout = QFormLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -36,7 +37,9 @@ class SlurmConfigWidget(QWidget):
         self._load_config()
 
     def _load_config(self):
-        slurm_config = self.config.get("slurm", {})
+        if self.config_key not in self.config:
+            self.config[self.config_key] = {}
+        slurm_config = self.config[self.config_key]
         self.job_name.setText(slurm_config.get("job_name", "MakeTorchGraphData"))
         self.output.setText(slurm_config.get("output", ""))
         self.error.setText(slurm_config.get("error", ""))
@@ -65,6 +68,6 @@ class SlurmConfigWidget(QWidget):
         self.env_activation.textChanged.connect(lambda t: self._update_config("env_activation", t))
 
     def _update_config(self, key, value):
-        if "slurm" not in self.config:
-            self.config["slurm"] = {}
-        self.config["slurm"][key] = value
+        if self.config_key not in self.config:
+            self.config[self.config_key] = {}
+        self.config[self.config_key][key] = value
