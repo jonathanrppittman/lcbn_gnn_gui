@@ -290,7 +290,6 @@ class MainWindow(QMainWindow):
                 args_text += f' --model "{model_script_name}"'
 
         args_filled = self._format_args(args_text, {"dataset_dir": f'"{dataset}"'})
-
         # If using SLURM, the command to run is a python script inside the sbatch script.
         # Otherwise, it's the script from the input field.
         if self.use_slurm.isChecked():
