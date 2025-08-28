@@ -1,4 +1,5 @@
 import os
+import shlex
 import subprocess
 from typing import Dict, Any, List
 import re
@@ -28,15 +29,13 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
         "qos": "--qos",
     }
 
+    # Process SBATCH directives
     new_lines: List[str] = []
-    python_cmd_replaced = False
-
     for line in template_lines:
         stripped_line = line.strip()
         if stripped_line.startswith("#SBATCH"):
             found_match = False
             for cfg_key, sbatch_key in sbatch_map.items():
-                # Regex to match SBATCH directive, accommodating both space and '=' separators
                 pattern = re.compile(rf"(#SBATCH\s+{re.escape(sbatch_key)})(?:[=\s])(.*)")
                 match = pattern.match(stripped_line)
                 if match:
@@ -46,19 +45,39 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
                         found_match = True
                         break
             if not found_match:
-                new_lines.append(line)  # Keep original line if no config override
-        elif "python" in stripped_line and not stripped_line.startswith("#"):
-            # Replace the python command execution line
-            new_lines.append(f"srun {command}\n")
-            python_cmd_replaced = True
+                new_lines.append(line)
         else:
             new_lines.append(line)
 
-    # If the python command was not found to be replaced, append it.
-    if not python_cmd_replaced:
-        new_lines.append(f"\nsrun {command}\n")
+    # Now, find and remove the old command block, then append the new one.
+    final_lines: List[str] = []
+    in_command_block = False
+    for line in new_lines:
+        stripped = line.strip()
 
-    content = "".join(new_lines)
+        # Detect start of the command block
+        if not in_command_block and not stripped.startswith("#") and ('srun' in stripped or 'python' in stripped):
+            in_command_block = True
+
+        # If we are in the command block, we skip the line.
+        # We also check if the block ends here.
+        if in_command_block:
+            if not stripped.endswith("\\"):
+                in_command_block = False  # End of the block
+            continue  # Skip the line
+
+        # Only append lines that are not part of the old command block
+        final_lines.append(line)
+
+    # Append the new command at the end of the script, formatted to be multi-line
+    if final_lines and not final_lines[-1].endswith('\n'):
+        final_lines.append('\n')
+
+    parts = ["srun"] + shlex.split(command)
+    multiline_command = " \\\n    ".join(parts)
+    final_lines.append(multiline_command + "\n")
+
+    content = "".join(final_lines)
 
     # Overwrite the original script
     with open(script_path, "w", encoding="utf-8") as f:
