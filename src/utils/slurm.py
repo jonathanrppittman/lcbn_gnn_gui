@@ -77,6 +77,7 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
     multiline_command = " \\\n    ".join(parts)
     final_lines.append(multiline_command + "\n")
 
+
     content = "".join(final_lines)
 
     # Overwrite the original script
