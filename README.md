@@ -1,4 +1,4 @@
-# GNN GUI (PyQt)
+# FUNCTIONAL CONNECTIVITY MATRIX GNN GUI (PyQt)
 
 This app is a no-code front end to run your existing conversion (.mat -> .pt) and training scripts for graph neural networks, with optional SLURM submission.
 
