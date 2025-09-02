@@ -49,34 +49,46 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
         else:
             new_lines.append(line)
 
-    # Now, find and remove the old command block, then append the new one.
-    final_lines: List[str] = []
-    in_command_block = False
-    for line in new_lines:
-        stripped = line.strip()
-
-        # Detect start of the command block
-        if not in_command_block and not stripped.startswith("#") and ('srun' in stripped or 'python' in stripped):
-            in_command_block = True
-
-        # If we are in the command block, we skip the line.
-        # We also check if the block ends here.
-        if in_command_block:
-            if not stripped.endswith("\\"):
-                in_command_block = False  # End of the block
-            continue  # Skip the line
-
-        # Only append lines that are not part of the old command block
-        final_lines.append(line)
-
-    # Append the new command at the end of the script, formatted to be multi-line
-    if final_lines and not final_lines[-1].endswith('\n'):
-        final_lines.append('\n')
-
+    # Build the srun command
     parts = ["srun"] + shlex.split(command)
-    multiline_command = " \\\n    ".join(parts)
-    final_lines.append(multiline_command + "\n")
+    multiline_command = " \\\n    ".join(parts) + "\n"
 
+    # Find the command placeholder and replace it. If not found, append.
+    final_lines = []
+    command_inserted = False
+    placeholder = "# <<< COMMAND HERE >>>"
+    for line in new_lines:
+        if placeholder in line:
+            final_lines.append(multiline_command)
+            command_inserted = True
+        else:
+            final_lines.append(line)
+
+    # If the placeholder was not found, fall back to the old method of appending.
+    # This ensures backward compatibility with the conversion script.
+    if not command_inserted:
+        # First, remove any existing command block to prevent duplication
+        cleaned_lines = []
+        in_command_block = False
+        for line in final_lines:
+            stripped = line.strip()
+            # A simple heuristic to detect a command block to remove
+            is_command_line = not stripped.startswith("#") and ('srun' in stripped or 'python' in stripped)
+
+            if not in_command_block and is_command_line:
+                in_command_block = True
+
+            if in_command_block:
+                if not stripped.endswith("\\"):
+                    in_command_block = False # End of block
+                continue # Skip line
+
+            cleaned_lines.append(line)
+
+        final_lines = cleaned_lines
+        if final_lines and not final_lines[-1].endswith('\n'):
+            final_lines.append('\n')
+        final_lines.append(multiline_command)
 
     content = "".join(final_lines)
 
