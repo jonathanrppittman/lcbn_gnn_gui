@@ -13,7 +13,7 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
         raise FileNotFoundError(f"SLURM script not found at: {script_path}")
 
     with open(script_path, "r") as f:
-        template_lines = f.readlines()
+        content = f.read()
 
     # Mapping from config key to SBATCH directive
     sbatch_map = {
@@ -28,37 +28,26 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
         "qos": "--qos",
     }
 
-    new_lines: List[str] = []
-    python_cmd_replaced = False
+    # Update SBATCH directives
+    for cfg_key, sbatch_key in sbatch_map.items():
+        if cfg_key in slurm_cfg and slurm_cfg[cfg_key]:
+            new_value = slurm_cfg[cfg_key]
+            # Regex to match SBATCH directive, accommodating both space and '=' separators
+            pattern = re.compile(rf"^(#SBATCH\s+{re.escape(sbatch_key)})(?:[=\s]).*", re.MULTILINE)
+            if pattern.search(content):
+                content = pattern.sub(rf"\1 {new_value}", content)
 
-    for line in template_lines:
-        stripped_line = line.strip()
-        if stripped_line.startswith("#SBATCH"):
-            found_match = False
-            for cfg_key, sbatch_key in sbatch_map.items():
-                # Regex to match SBATCH directive, accommodating both space and '=' separators
-                pattern = re.compile(rf"(#SBATCH\s+{re.escape(sbatch_key)})(?:[=\s])(.*)")
-                match = pattern.match(stripped_line)
-                if match:
-                    if cfg_key in slurm_cfg and slurm_cfg[cfg_key]:
-                        new_value = slurm_cfg[cfg_key]
-                        new_lines.append(f"{match.group(1)} {new_value}\n")
-                        found_match = True
-                        break
-            if not found_match:
-                new_lines.append(line)  # Keep original line if no config override
-        elif "python" in stripped_line and not stripped_line.startswith("#"):
-            # Replace the python command execution line
-            new_lines.append(f"srun {command}\n")
-            python_cmd_replaced = True
-        else:
-            new_lines.append(line)
+    # Regex to find and replace the python command, including multi-line commands
+    # This looks for a line starting with 'srun python' or just 'python', not commented out,
+    # and includes any subsequent lines connected by a trailing '\'.
+    python_cmd_pattern = re.compile(r"^(?!#)\s*(?:srun\s+)?python.*(?:\\\s*\n.*)*", re.MULTILINE)
 
-    # If the python command was not found to be replaced, append it.
-    if not python_cmd_replaced:
-        new_lines.append(f"\nsrun {command}\n")
+    new_command_str = f"srun {command}"
 
-    content = "".join(new_lines)
+    content, num_replacements = python_cmd_pattern.subn(new_command_str, content, count=1)
+    if num_replacements == 0:
+        # If no python command was found, append the new one.
+        content += f"\n{new_command_str}\n"
 
     # Overwrite the original script
     with open(script_path, "w", encoding="utf-8") as f:
