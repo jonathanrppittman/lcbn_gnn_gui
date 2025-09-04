@@ -300,7 +300,7 @@ class MainWindow(QMainWindow):
             sbatch_settings, env_setup = parse_sbatch_settings(template_path)
 
             # Override with settings from the GUI
-            gui_slurm_config = self.slurm_conversion_config_widget.get_config()
+            gui_slurm_config = self.config.get("slurm_conversion", {})
             for key, value in gui_slurm_config.items():
                 if value:
                     sbatch_settings[key.replace('_', '-')] = value
@@ -359,7 +359,7 @@ class MainWindow(QMainWindow):
             template_path = self.train_script.text().strip()
             sbatch_settings, env_setup = parse_sbatch_settings(template_path)
 
-            gui_slurm_config = self.slurm_training_config_widget.get_config()
+            gui_slurm_config = self.config.get("slurm_training", {})
             for key, value in gui_slurm_config.items():
                 if value:
                     sbatch_settings[key.replace('_', '-')] = value
