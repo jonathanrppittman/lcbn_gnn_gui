@@ -247,12 +247,31 @@ class MainWindow(QMainWindow):
 
         if self.use_slurm_conversion.isChecked():
             slurm_config = self.config.get("slurm_conversion", {})
-            script_path = update_slurm_script("src/utils/MakeTorchGraphData.sh", command, slurm_config)
+            template_path = "src/utils/MakeTorchGraphData.sh"
+
+            # Create a temporary, unique job script to prevent race conditions
+            jobs_dir = self.config.get("jobs_dir", "jobs")
+            os.makedirs(jobs_dir, exist_ok=True)
+            job_filename = f"conversion_job_{datetime.now().strftime('%Y%m%d-%H%M%S')}.sh"
+            job_script_path = os.path.join(jobs_dir, job_filename)
+
+            try:
+                # Copy template content to the new job script
+                with open(template_path, 'r') as f_template:
+                    with open(job_script_path, 'w') as f_job:
+                        f_job.write(f_template.read())
+            except FileNotFoundError:
+                self._append_console(f"SLURM template not found at: {template_path}\\n")
+                return
+
+            # Update the new job script with the command and config
+            script_path = update_slurm_script(job_script_path, command, slurm_config)
             result = submit_job(script_path)
+
             if result.returncode == 0:
-                self._append_console(f"Submitted job: {result.stdout}")
+                self._append_console(f"Submitted conversion job script: {script_path}\\nJob ID: {result.stdout}")
             else:
-                self._append_console(f"SLURM submit failed: {result.stderr}")
+                self._append_console(f"SLURM submit failed for script {script_path}:\\n{result.stderr}")
         else:
             command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
