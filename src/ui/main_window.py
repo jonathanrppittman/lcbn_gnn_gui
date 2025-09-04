@@ -12,7 +12,7 @@ import re
 from utils.config import load_config, save_config
 from utils.process_runner import CommandRunner
 import shlex
-from utils.slurm import update_slurm_script, submit_job
+from utils.slurm import parse_sbatch_settings, create_slurm_script, submit_job
 from ui.slurm_config_widget import SlurmConfigWidget
 
 
@@ -246,34 +246,30 @@ class MainWindow(QMainWindow):
         command = f"{_detect_interpreter(script)} {args_filled}".strip()
 
         if self.use_slurm_conversion.isChecked():
-            slurm_config = self.config.get("slurm_conversion", {})
-            template_path = "src/utils/MakeTorchGraphData.sh"
+            # Get base SBATCH settings and env setup from the selected script
+            template_path = self.conv_script.text().strip()
+            sbatch_settings, env_setup = parse_sbatch_settings(template_path)
 
-            # Create a temporary, unique job script to prevent race conditions
+            # Override with settings from the GUI
+            gui_slurm_config = self.slurm_conversion_config_widget.get_config()
+            for key, value in gui_slurm_config.items():
+                if value:
+                    sbatch_settings[key.replace('_', '-')] = value
+
+            # Create and submit the job script
             jobs_dir = self.config.get("jobs_dir", "jobs")
             os.makedirs(jobs_dir, exist_ok=True)
             job_filename = f"conversion_job_{datetime.now().strftime('%Y%m%d-%H%M%S')}.sh"
             job_script_path = os.path.join(jobs_dir, job_filename)
 
-            try:
-                # Copy template content to the new job script
-                with open(template_path, 'r') as f_template:
-                    with open(job_script_path, 'w') as f_job:
-                        f_job.write(f_template.read())
-            except FileNotFoundError:
-                self._append_console(f"SLURM template not found at: {template_path}\\n")
-                return
-
-            # Update the new job script with the command and config
-            script_path = update_slurm_script(job_script_path, command, slurm_config)
+            script_path = create_slurm_script(job_script_path, command, sbatch_settings, env_setup)
             result = submit_job(script_path)
 
             if result.returncode == 0:
-                self._append_console(f"Submitted conversion job script: {script_path}\\nJob ID: {result.stdout}")
+                self._append_console(f"Submitted conversion job script: {script_path}\nJob ID: {result.stdout}")
             else:
-                self._append_console(f"SLURM submit failed for script {script_path}:\\n{result.stderr}")
+                self._append_console(f"SLURM submit failed for script {script_path}:\n{result.stderr}")
         else:
-            command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
 
     def _run_training(self) -> None:
@@ -287,22 +283,16 @@ class MainWindow(QMainWindow):
             return
 
         model_map = {
-            "GCN": "GCNConv",
-            "GAT": "GATConv",
-            "GATv2": "GATv2Conv",
-            "GraphSAGE": "SAGEConv",
-            "GTransformer": "TransformerConv",
+            "GCN": "GCNConv", "GAT": "GATConv", "GATv2": "GATv2Conv",
+            "GraphSAGE": "SAGEConv", "GTransformer": "TransformerConv",
         }
         model_display_name = self.model_combo.currentText()
         model_script_name = model_map.get(model_display_name, model_display_name)
 
         args_text = self.train_args.text().strip() or self.config["training"].get("default_args", "")
-
-        # Handle the model argument separately
         if "{model}" in args_text:
             args_text = args_text.replace("{model}", f'"{model_script_name}"')
         else:
-            # If --model is already present, replace its value. Otherwise, add it.
             model_arg_pattern = re.compile(r'(--model\s+)(?:"[^"]*"|\'[^\']*\'|\S+)')
             if model_arg_pattern.search(args_text):
                 args_text = model_arg_pattern.sub(rf'\1"{model_script_name}"', args_text)
@@ -310,40 +300,30 @@ class MainWindow(QMainWindow):
                 args_text += f' --model "{model_script_name}"'
 
         args_filled = self._format_args(args_text, {"dataset_dir": f'"{dataset}"'})
+        command = f"python {script} {args_filled}".strip()
+
         if self.use_slurm.isChecked():
-            # The command to run is the python script from the input field.
-            command = f"python {script} {args_filled}".strip()
-            slurm_config = self.config.get("slurm_training", {})
+            template_path = self.train_script.text().strip()
+            sbatch_settings, env_setup = parse_sbatch_settings(template_path)
 
-            # Use the generic training template
-            template_path = "src/utils/gnn_training_template.sh"
+            gui_slurm_config = self.slurm_training_config_widget.get_config()
+            for key, value in gui_slurm_config.items():
+                if value:
+                    sbatch_settings[key.replace('_', '-')] = value
 
-            # Create a temporary, unique job script to prevent race conditions
-            # and avoid modifying the template.
             jobs_dir = self.config.get("jobs_dir", "jobs")
             os.makedirs(jobs_dir, exist_ok=True)
             job_filename = f"gnn_job_{datetime.now().strftime('%Y%m%d-%H%M%S')}.sh"
             job_script_path = os.path.join(jobs_dir, job_filename)
 
-            try:
-                # Copy template content to the new job script
-                with open(template_path, 'r') as f_template:
-                    with open(job_script_path, 'w') as f_job:
-                        f_job.write(f_template.read())
-            except FileNotFoundError:
-                self._append_console(f"SLURM template not found at: {template_path}\\n")
-                return
-
-            # Update the new job script with the command and config
-            script_path = update_slurm_script(job_script_path, command, slurm_config)
+            script_path = create_slurm_script(job_script_path, command, sbatch_settings, env_setup)
             result = submit_job(script_path)
 
             if result.returncode == 0:
-                self._append_console(f"Submitted job script: {script_path}\\nJob ID: {result.stdout}")
+                self._append_console(f"Submitted job script: {script_path}\nJob ID: {result.stdout}")
             else:
-                self._append_console(f"SLURM submit failed for script {script_path}:\\n{result.stderr}")
+                self._append_console(f"SLURM submit failed for script {script_path}:\n{result.stderr}")
         else:
-            command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
 
     # ------------- Runner -------------
