@@ -1,105 +1,72 @@
 import os
 import shlex
 import subprocess
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import re
 
 
-def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any]) -> str:
+def parse_sbatch_settings(script_path: str) -> Tuple[Dict[str, str], List[str]]:
     """
-    Updates the specified SLURM script file with SBATCH directives and the
-    python command from the provided configuration. This function overwrites the script.
+    Parses a shell script to extract SBATCH directives and environment setup commands.
     """
+    sbatch_settings: Dict[str, str] = {}
+    env_setup_lines: List[str] = []
+
     if not os.path.exists(script_path):
-        raise FileNotFoundError(f"SLURM script not found at: {script_path}")
+        return sbatch_settings, env_setup_lines
 
-    with open(script_path, "r") as f:
-        template_lines = f.readlines()
+    sbatch_pattern = re.compile(r'#SBATCH\s+(--[\w-]+(?:=[\w\d]+)?|-[a-zA-Z])\s*([^\s]*)')
 
-    # Mapping from config key to SBATCH directive
-    sbatch_map = {
-        "job_name": "--job-name",
-        "output": "--output",
-        "error": "--error",
-        "partition": "-p",
-        "gpus": "--gpus",
-        "mem": "--mem",
-        "time": "--time",
-        "account": "--account",
-        "qos": "--qos",
-    }
+    with open(script_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            sbatch_match = sbatch_pattern.match(line)
+            if sbatch_match:
+                key = sbatch_match.group(1).lstrip('-')
+                value = sbatch_match.group(2)
+                sbatch_settings[key] = value
+            elif line.startswith("module") or line.startswith("conda"):
+                env_setup_lines.append(line)
 
-    # Process SBATCH directives
-    new_lines: List[str] = []
-    for line in template_lines:
-        stripped_line = line.strip()
-        if stripped_line.startswith("#SBATCH"):
-            found_match = False
-            for cfg_key, sbatch_key in sbatch_map.items():
-                pattern = re.compile(rf"(#SBATCH\s+{re.escape(sbatch_key)})(?:[=\s])(.*)")
-                match = pattern.match(stripped_line)
-                if match:
-                    if cfg_key in slurm_cfg and slurm_cfg[cfg_key]:
-                        new_value = slurm_cfg[cfg_key]
-                        new_lines.append(f"{match.group(1)} {new_value}\n")
-                        found_match = True
-                        break
-            if not found_match:
-                new_lines.append(line)
-        else:
-            new_lines.append(line)
+    return sbatch_settings, env_setup_lines
 
-    # Build the srun command
-    parts = ["srun"] + shlex.split(command)
-    multiline_command = " \\\n    ".join(parts) + "\n"
 
-    # Find the command placeholder and replace it. If not found, append.
-    final_lines = []
-    command_inserted = False
-    placeholder = "# <<< COMMAND HERE >>>"
-    for line in new_lines:
-        if placeholder in line:
-            final_lines.append(multiline_command)
-            command_inserted = True
-        else:
-            final_lines.append(line)
-
-    # If the placeholder was not found, fall back to the old method of appending.
-    # This ensures backward compatibility with the conversion script.
-    if not command_inserted:
-        # First, remove any existing command block to prevent duplication
-        cleaned_lines = []
-        in_command_block = False
-        for line in final_lines:
-            stripped = line.strip()
-            # A simple heuristic to detect a command block to remove
-            is_command_line = not stripped.startswith("#") and ('srun' in stripped or 'python' in stripped)
-
-            if not in_command_block and is_command_line:
-                in_command_block = True
-
-            if in_command_block:
-                if not stripped.endswith("\\"):
-                    in_command_block = False # End of block
-                continue # Skip line
-
-            cleaned_lines.append(line)
-
-        final_lines = cleaned_lines
-        if final_lines and not final_lines[-1].endswith('\n'):
-            final_lines.append('\n')
-        final_lines.append(multiline_command)
-
-    content = "".join(final_lines)
-
-    # Overwrite the original script
+def create_slurm_script(
+    script_path: str,
+    command: str,
+    sbatch_settings: Dict[str, Any],
+    env_setup_lines: List[str]
+) -> str:
+    """
+    Generates a new SLURM script file with the specified command and SBATCH directives.
+    """
     with open(script_path, "w", encoding="utf-8") as f:
-        f.write(content)
-    os.chmod(script_path, 0o750)
+        f.write("#!/bin/bash -l\n\n")
 
+        # Write SBATCH directives
+        for key, value in sbatch_settings.items():
+            if value:
+                f.write(f"#SBATCH --{key}={value}\n")
+        f.write("\n")
+
+        # Write environment setup commands
+        if env_setup_lines:
+            for line in env_setup_lines:
+                f.write(f"{line}\n")
+            f.write("\n")
+
+        # Write the srun command
+        parts = ["srun"] + shlex.split(command)
+        multiline_command = " \\\n    ".join(parts) + "\n"
+        f.write(multiline_command)
+
+    os.chmod(script_path, 0o750)
     return script_path
 
 
 def submit_job(script_path: str) -> subprocess.CompletedProcess:
+    """
+    Submits a job to SLURM using sbatch.
+    """
     return subprocess.run(["sbatch", script_path], check=False, capture_output=True, text=True)
 
