@@ -1,19 +1,46 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 import os
 from datetime import datetime
+import subprocess
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QFileDialog, QMessageBox, QApplication,
     QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit,
     QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 import re
 
 from utils.config import load_config, save_config
 from utils.process_runner import CommandRunner
 import shlex
-from utils.slurm import parse_sbatch_settings, create_slurm_script, submit_job
+from utils.slurm import parse_sbatch_settings, create_slurm_script
 from ui.slurm_config_widget import SlurmConfigWidget
+
+
+class SbatchRunner(QThread):
+    """
+    Runs sbatch in a thread and emits the results.
+    """
+    # finished signal: return code, stdout, stderr
+    finished = pyqtSignal(int, str, str)
+
+    def __init__(self, script_path: str, parent=None):
+        super().__init__(parent)
+        self.script_path = script_path
+
+    def run(self) -> None:
+        try:
+            result = subprocess.run(
+                ["sbatch", self.script_path],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.finished.emit(result.returncode, result.stdout, result.stderr)
+        except FileNotFoundError:
+            self.finished.emit(-1, "", f"sbatch command not found. Is SLURM installed and in your PATH?")
+        except Exception as e:
+            self.finished.emit(-1, "", f"An unexpected error occurred: {e}")
 
 
 def _detect_interpreter(script_path: str) -> str:
@@ -27,7 +54,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("GNN GUI")
         self.config = load_config()
-        self.runner = None  # type: CommandRunner
+        self.runner: Optional[CommandRunner] = None
+        self.sbatch_runner: Optional[SbatchRunner] = None
 
         central = QWidget(self)
         self.setCentralWidget(central)
@@ -213,6 +241,23 @@ class MainWindow(QMainWindow):
         if path:
             self.dataset_file_input.setText(path)
 
+    def _is_busy(self) -> bool:
+        return (self.runner and self.runner.isRunning()) or \
+               (self.sbatch_runner and self.sbatch_runner.isRunning())
+
+    def _on_sbatch_finished(self, returncode: int, stdout: str, stderr: str) -> None:
+        runner = self.sender()
+        if not runner:
+            return
+
+        script_path = runner.script_path
+        self.console.moveCursor(self.console.textCursor().End)
+        if returncode == 0:
+            job_id = stdout.strip()
+            self._append_console(f"Successfully submitted job script: {script_path}\nJob ID: {job_id}\n")
+        else:
+            self._append_console(f"SLURM submit failed for script {script_path}:\n{stderr}\n")
+
     # ------------- Command builders -------------
     def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
         result = template
@@ -221,6 +266,10 @@ class MainWindow(QMainWindow):
         return result
 
     def _run_conversion(self) -> None:
+        if self._is_busy():
+            QMessageBox.warning(self, "Busy", "A job is already running. Please wait.")
+            return
+
         script = self.conv_script.text().strip()
         if not script:
             QMessageBox.warning(self, "Missing script", "Please select a conversion script.")
@@ -263,16 +312,20 @@ class MainWindow(QMainWindow):
             job_script_path = os.path.join(jobs_dir, job_filename)
 
             script_path = create_slurm_script(job_script_path, command, sbatch_settings, env_setup)
-            result = submit_job(script_path)
 
-            if result.returncode == 0:
-                self._append_console(f"Submitted conversion job script: {script_path}\nJob ID: {result.stdout}")
-            else:
-                self._append_console(f"SLURM submit failed for script {script_path}:\n{result.stderr}")
+            self.console.clear()
+            self._append_console(f"Submitting SLURM job: {script_path}\n")
+            self.sbatch_runner = SbatchRunner(script_path, self)
+            self.sbatch_runner.finished.connect(self._on_sbatch_finished)
+            self.sbatch_runner.start()
         else:
             self._start_command(command)
 
     def _run_training(self) -> None:
+        if self._is_busy():
+            QMessageBox.warning(self, "Busy", "A job is already running. Please wait.")
+            return
+
         script = self.train_script.text().strip()
         if not script:
             QMessageBox.warning(self, "Missing script", "Please select a training script.")
@@ -317,12 +370,12 @@ class MainWindow(QMainWindow):
             job_script_path = os.path.join(jobs_dir, job_filename)
 
             script_path = create_slurm_script(job_script_path, command, sbatch_settings, env_setup)
-            result = submit_job(script_path)
 
-            if result.returncode == 0:
-                self._append_console(f"Submitted job script: {script_path}\nJob ID: {result.stdout}")
-            else:
-                self._append_console(f"SLURM submit failed for script {script_path}:\n{result.stderr}")
+            self.console.clear()
+            self._append_console(f"Submitting SLURM job: {script_path}\n")
+            self.sbatch_runner = SbatchRunner(script_path, self)
+            self.sbatch_runner.finished.connect(self._on_sbatch_finished)
+            self.sbatch_runner.start()
         else:
             self._start_command(command)
 

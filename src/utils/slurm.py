@@ -55,10 +55,8 @@ def create_slurm_script(
                 f.write(f"{line}\n")
             f.write("\n")
 
-        # Write the srun command
-        parts = ["srun"] + shlex.split(command)
-        multiline_command = " \\\n    ".join(parts) + "\n"
-        f.write(multiline_command)
+        # Write the command
+        f.write(f"{command}\n")
 
     os.chmod(script_path, 0o750)
     return script_path
