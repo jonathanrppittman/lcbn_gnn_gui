@@ -300,7 +300,12 @@ class MainWindow(QMainWindow):
             python_script = "main_NCanda.py"
 
             # Reformat args for multiline sbatch script
-            multiline_args = re.sub(r'\s+(--)', r' \\\n  \1', args_filled)
+            args_parts = [p.strip() for p in args_filled.split('--') if p.strip()]
+            if args_parts:
+                # Prepend '--' to each part since split removed it, then join with backslash-newline
+                multiline_args = " \\\n  ".join([f"--{p}" for p in args_parts])
+            else:
+                multiline_args = ""
             command = f"python {python_script} {multiline_args}".strip()
 
             slurm_config = self.config.get("slurm_training", {})
