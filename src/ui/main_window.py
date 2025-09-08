@@ -210,7 +210,7 @@ class MainWindow(QMainWindow):
             self, "Select dataset file", filter="PyTorch data (*.pt);;All files (*)"
         )
         if path:
-            self.dataset_file_input.setText(path)
+            self.dataset_file_input.setText(os.path.basename(path))
 
     # ------------- Command builders -------------
     def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
