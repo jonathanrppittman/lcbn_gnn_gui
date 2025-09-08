@@ -2,6 +2,7 @@ import os
 import subprocess
 from typing import Dict, Any, List
 import re
+import shlex
 
 
 def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any]) -> str:
@@ -42,7 +43,44 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
     # and includes any subsequent lines connected by a trailing '\'.
     python_cmd_pattern = re.compile(r"^(?!#)\s*(?:srun\s+)?python.*(?:\\\s*\n.*)*", re.MULTILINE)
 
-    new_command_str = f"srun {command}"
+    # Find the base command and arguments
+    try:
+        command_parts = shlex.split(command)
+    except ValueError:
+        # Handle cases where shlex can't split the command
+        command_parts = command.split()
+
+    base_cmd_parts = []
+    args_parts = []
+    is_arg = False
+    for part in command_parts:
+        if part.startswith("-"):
+            is_arg = True
+        if is_arg:
+            args_parts.append(part)
+        else:
+            base_cmd_parts.append(part)
+
+    base_cmd = " ".join(base_cmd_parts)
+
+    if args_parts:
+        # Group arguments with their values
+        grouped_args = []
+        current_arg = []
+        for arg in args_parts:
+            if arg.startswith("-") and current_arg:
+                grouped_args.append(" ".join(current_arg))
+                current_arg = [arg]
+            else:
+                current_arg.append(arg)
+        if current_arg:
+            grouped_args.append(" ".join(current_arg))
+
+        multiline_args = " \\\n  ".join(grouped_args)
+        new_command_str = f"srun {base_cmd} {multiline_args}".strip()
+    else:
+        new_command_str = f"srun {base_cmd}".strip()
+
 
     content, num_replacements = python_cmd_pattern.subn(new_command_str, content, count=1)
     if num_replacements == 0:
