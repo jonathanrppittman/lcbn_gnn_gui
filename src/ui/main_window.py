@@ -279,8 +279,8 @@ class MainWindow(QMainWindow):
         args_text = self.train_args.text().strip() or self.config["training"].get("default_args", "")
 
         # Clean up any existing model or data arguments/placeholders
-        model_arg_pattern = re.compile(r'--model\s+(?:"[^"]*"|\'[^\']*\'|\S+)')
-        data_arg_pattern = re.compile(r'--data\s+(?:"[^"]*"|\'[^\']*\'|\S+)')
+        model_arg_pattern = re.compile(r'--model(?:[=\s]+)(?:"[^"]*"|\'[^\']*\'|\S+)')
+        data_arg_pattern = re.compile(r'--data(?:[=\s]+)(?:"[^"]*"|\'[^\']*\'|\S+)')
 
         args_text = model_arg_pattern.sub('', args_text)
         args_text = data_arg_pattern.sub('', args_text)
