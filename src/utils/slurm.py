@@ -44,17 +44,6 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
     except ValueError:
         command_parts = command.split()
 
-    base_cmd_parts = []
-    args_parts = []
-    is_arg = False
-    for part in command_parts:
-        if part.startswith("-"):
-            is_arg = True
-        if is_arg:
-            args_parts.append(part)
-        else:
-            base_cmd_parts.append(part)
-
     base_cmd = " ".join(base_cmd_parts)
 
     if args_parts:
