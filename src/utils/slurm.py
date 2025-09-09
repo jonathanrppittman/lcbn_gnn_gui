@@ -112,6 +112,7 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
     # Reconstruct the arguments string for the script
     # Each argument is on a new line for readability.
     args_list = []
+
     # List of arguments that should always be quoted
     quoted_args = ["--model", "--data", "--device", "--trip_net_num"]
 
