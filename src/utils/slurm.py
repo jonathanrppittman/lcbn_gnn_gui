@@ -38,34 +38,113 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
             if pattern.search(content):
                 content = pattern.sub(rf"\1 {new_value}", content)
 
-    # Build the new, correctly formatted multi-line command string
-    try:
-        command_parts = shlex.split(command)
-    except ValueError:
-        command_parts = command.split()
+    # This regex finds the srun command, capturing the python part and its arguments
+    srun_pattern = re.compile(r"srun\s+(python\s+\S+\.py)\s+(.*)", re.DOTALL)
+    srun_match = srun_pattern.search(content)
 
-    base_cmd = " ".join(base_cmd_parts)
+    # This regex finds the python command if srun is not present.
+    python_pattern = re.compile(r"^(?!#)\s*(python\s+\S+\.py)\s+(.*)", re.MULTILINE | re.DOTALL)
+    python_match = python_pattern.search(content)
 
-    if args_parts:
-        grouped_args = []
-        current_arg = []
-        for arg in args_parts:
-            if arg.startswith("-") and current_arg:
-                grouped_args.append(" ".join(current_arg))
-                current_arg = [arg]
-            else:
-                current_arg.append(arg)
-        if current_arg:
-            grouped_args.append(" ".join(current_arg))
+    base_command = ""
+    existing_args_str = ""
 
-        multiline_args = " \\\n  ".join(grouped_args)
-        new_command_str = f"srun {base_cmd} {multiline_args}".strip()
+    if srun_match:
+        base_command = srun_match.group(1)
+        existing_args_str = srun_match.group(2)
+    elif python_match:
+        # If no srun, but a python command is found, use it as the base.
+        base_command = python_match.group(1)
+        existing_args_str = python_match.group(2)
+
+    # Parse existing arguments from the script
+    # shlex.split is used to handle quoted arguments correctly.
+    # The existing arguments are processed first.
+    existing_args = shlex.split(existing_args_str.replace(' \\', ''))
+
+    # The command from the GUI is authoritative, so its arguments will overwrite existing ones.
+    # It's also split to handle complex arguments.
+    gui_args = shlex.split(command)
+
+    # The command from the GUI is authoritative. Find where the arguments start.
+    if gui_args:
+        arg_start_index = -1
+        for i, arg in enumerate(gui_args):
+            if arg.startswith('-'):
+                arg_start_index = i
+                break
+
+        # If arguments are found, update the base command and the list of GUI arguments.
+        if arg_start_index != -1:
+            base_command = " ".join(gui_args[:arg_start_index])
+            gui_args_list = gui_args[arg_start_index:]
+        else:
+            # If no arguments, the whole command is the base command.
+            base_command = " ".join(gui_args)
+            gui_args_list = []
     else:
-        new_command_str = f"srun {base_cmd}".strip()
+        gui_args_list = []
 
-    # Replace the old command block with the new one using line-by-line parsing
+    # A dictionary to hold the final set of arguments.
+    # This will ensure that any argument from the GUI overwrites the script's default.
+    args_dict = {}
+
+    # Process existing arguments
+    i = 0
+    while i < len(existing_args):
+        if existing_args[i].startswith('--'):
+            key = existing_args[i]
+            # Check if the next item is a value or another flag
+            if i + 1 < len(existing_args) and not existing_args[i+1].startswith('--'):
+                args_dict[key] = existing_args[i+1]
+                i += 2
+            else:
+                args_dict[key] = None  # Flag without a value
+                i += 1
+        else:
+            i += 1
+
+    # Process GUI arguments, overwriting existing ones
+    i = 0
+    while i < len(gui_args_list):
+        if gui_args_list[i].startswith('--'):
+            key = gui_args_list[i]
+            if i + 1 < len(gui_args_list) and not gui_args_list[i+1].startswith('--'):
+                args_dict[key] = gui_args_list[i+1]
+                i += 2
+            else:
+                args_dict[key] = None
+                i += 1
+        else:
+            i += 1
+
+    # Reconstruct the arguments string for the script
+    # Each argument is on a new line for readability.
+    args_list = []
+    # List of arguments that should always be quoted
+    quoted_args = ["--model", "--data", "--device", "--trip_net_num"]
+
+    for key, value in args_dict.items():
+        if value is not None:
+            # Check if the key is in the list of args to be quoted, or if the value contains a space.
+            if key in quoted_args or ' ' in str(value):
+                # Using single quotes as requested by the user.
+                args_list.append(f"{key} '{value}'")
+            else:
+                args_list.append(f'{key} {value}')
+        else:
+            # For flags without values
+            args_list.append(key)
+
+    # Joining with " \\n " ensures each argument is on a new line.
+    multiline_args = " \\\n  ".join(args_list)
+
+    # The new command to be placed in the script.
+    new_command_str = f"srun {base_command} \\\n  {multiline_args}"
+
+    # Replace the old command block with the new one
     lines = content.split('\n')
-    start_pattern = re.compile(r"^(?!#)\s*(?:srun\s+)?python.*")
+    start_pattern = re.compile(r"^(?!#)\s*(srun\s+)?python.*")
 
     start_index = -1
     for i, line in enumerate(lines):
