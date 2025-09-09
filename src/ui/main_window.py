@@ -298,16 +298,7 @@ class MainWindow(QMainWindow):
         if self.use_slurm.isChecked():
             # TODO: Make the python script name configurable
             python_script = "main_NCanda.py"
-
-            # Reformat args for multiline sbatch script
-            args_parts = [p.strip() for p in args_filled.split('--') if p.strip()]
-            if args_parts:
-                # Prepend '--' to each part since split removed it, then join with backslash-newline
-                multiline_args = " \\\n  ".join([f"--{p}" for p in args_parts])
-            else:
-                multiline_args = ""
-            command = f"python {python_script} {multiline_args}".strip()
-
+            command = f"python {python_script} {args_filled}".strip()
             slurm_config = self.config.get("slurm_training", {})
             script_path = update_slurm_script(script, command, slurm_config)
             result = submit_job(script_path)

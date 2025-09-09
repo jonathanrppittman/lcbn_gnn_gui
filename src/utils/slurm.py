@@ -2,6 +2,7 @@ import os
 import subprocess
 from typing import Dict, Any, List
 import re
+import shlex
 
 
 def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any]) -> str:
@@ -37,16 +38,71 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
             if pattern.search(content):
                 content = pattern.sub(rf"\1 {new_value}", content)
 
-    # Regex to find and replace the python command, including multi-line commands
-    # This looks for a line starting with 'srun python' or just 'python', not commented out,
-    # and includes any subsequent lines connected by a trailing '\'.
-    python_cmd_pattern = re.compile(r"^(?!#)\s*(?:srun\s+)?python.*(?:\\\s*\n.*)*", re.MULTILINE)
+    # Build the new, correctly formatted multi-line command string
+    try:
+        command_parts = shlex.split(command)
+    except ValueError:
+        command_parts = command.split()
 
-    new_command_str = f"srun {command}"
+    base_cmd_parts = []
+    args_parts = []
+    is_arg = False
+    for part in command_parts:
+        if part.startswith("-"):
+            is_arg = True
+        if is_arg:
+            args_parts.append(part)
+        else:
+            base_cmd_parts.append(part)
 
-    content, num_replacements = python_cmd_pattern.subn(new_command_str, content, count=1)
-    if num_replacements == 0:
-        # If no python command was found, append the new one.
+    base_cmd = " ".join(base_cmd_parts)
+
+    if args_parts:
+        grouped_args = []
+        current_arg = []
+        for arg in args_parts:
+            if arg.startswith("-") and current_arg:
+                grouped_args.append(" ".join(current_arg))
+                current_arg = [arg]
+            else:
+                current_arg.append(arg)
+        if current_arg:
+            grouped_args.append(" ".join(current_arg))
+
+        multiline_args = " \\\n  ".join(grouped_args)
+        new_command_str = f"srun {base_cmd} {multiline_args}".strip()
+    else:
+        new_command_str = f"srun {base_cmd}".strip()
+
+    # Replace the old command block with the new one using line-by-line parsing
+    lines = content.split('\n')
+    start_pattern = re.compile(r"^(?!#)\s*(?:srun\s+)?python.*")
+
+    start_index = -1
+    for i, line in enumerate(lines):
+        if start_pattern.match(line):
+            start_index = i
+            break
+
+    if start_index != -1:
+        # Found the start, now find the end of the block.
+        # A block continues if the line is empty or indented.
+        end_index = start_index
+        for i in range(start_index + 1, len(lines)):
+            line = lines[i]
+            if line.strip() == '' or line.startswith(' ') or line.startswith('\t'):
+                end_index = i
+            else:
+                # First non-indented, non-empty line marks the end.
+                break
+
+        # Reconstruct the content with the new command
+        pre_block = lines[:start_index]
+        post_block = lines[end_index+1:]
+        new_lines = pre_block + [new_command_str] + post_block
+        content = "\n".join(new_lines)
+    else:
+        # If no python command was found, append it to the end
         content += f"\n{new_command_str}\n"
 
     # Overwrite the original script
