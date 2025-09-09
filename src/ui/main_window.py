@@ -278,21 +278,35 @@ class MainWindow(QMainWindow):
 
         args_text = self.train_args.text().strip() or self.config["training"].get("default_args", "")
 
-        # Clean up any existing model or data arguments/placeholders
-        model_arg_pattern = re.compile(r'--model(?:[=\s]+)(?:"[^"]*"|\'[^\']*\'|\S+)')
-        data_arg_pattern = re.compile(r'--data(?:[=\s]+)(?:"[^"]*"|\'[^\']*\'|\S+)')
+        # Define the arguments from the GUI
+        gui_args = {
+            "--model": model_script_name,
+            "--data": dataset
+        }
 
-        args_text = model_arg_pattern.sub('', args_text)
-        args_text = data_arg_pattern.sub('', args_text)
-        args_text = args_text.replace("{model}", "")
-        args_text = args_text.replace("{dataset_dir}", "")
+        # Split the base arguments string into a list
+        args_list = shlex.split(args_text)
 
-        # Add the definitive model and data arguments from the GUI
-        args_text += f' --model "{model_script_name}"'
-        args_text += f' --data "{dataset}"'
+        # Remove any existing instances of the GUI-controlled arguments
+        for key in gui_args:
+            if key in args_list:
+                try:
+                    # Find the index of the argument and remove it and its value
+                    idx = args_list.index(key)
+                    args_list.pop(idx)  # Remove the key
+                    if idx < len(args_list) and not args_list[idx].startswith('-'):
+                        args_list.pop(idx)  # Remove the value
+                except ValueError:
+                    # The key is not in the list, so we can ignore it
+                    pass
 
-        # Clean up potential extra whitespace and set final args
-        args_filled = " ".join(args_text.split())
+        # Now, add the GUI arguments to the list
+        for key, value in gui_args.items():
+            args_list.append(key)
+            args_list.append(value)
+
+        # Join the arguments back into a string
+        args_filled = " ".join(shlex.quote(arg) for arg in args_list)
         # If using SLURM, the command to run is a python script inside the sbatch script.
         # Otherwise, it's the script from the input field.
         if self.use_slurm.isChecked():
