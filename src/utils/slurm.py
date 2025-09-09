@@ -112,14 +112,20 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
     # Reconstruct the arguments string for the script
     # Each argument is on a new line for readability.
     args_list = []
+
+    # List of arguments that should always be quoted
+    quoted_args = ["--model", "--data", "--device", "--trip_net_num"]
+
     for key, value in args_dict.items():
         if value is not None:
-            # Add quotes around values that contain spaces
-            if ' ' in str(value):
-                args_list.append(f'{key} "{value}"')
+            # Check if the key is in the list of args to be quoted, or if the value contains a space.
+            if key in quoted_args or ' ' in str(value):
+                # Using single quotes as requested by the user.
+                args_list.append(f"{key} '{value}'")
             else:
                 args_list.append(f'{key} {value}')
         else:
+            # For flags without values
             args_list.append(key)
 
     # Joining with " \\n " ensures each argument is on a new line.
