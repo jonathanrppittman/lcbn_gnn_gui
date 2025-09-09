@@ -66,13 +66,22 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
     # It's also split to handle complex arguments.
     gui_args = shlex.split(command)
 
-    # The first element of gui_args is the command, which we already have.
-    # The rest are the arguments that should overwrite the defaults.
-    # The base command is taken from the GUI command.
+    # The command from the GUI is authoritative. Find where the arguments start.
     if gui_args:
-        base_command = gui_args[0]
-        # Arguments from the GUI (command[1:])
-        gui_args_list = gui_args[1:]
+        arg_start_index = -1
+        for i, arg in enumerate(gui_args):
+            if arg.startswith('-'):
+                arg_start_index = i
+                break
+
+        # If arguments are found, update the base command and the list of GUI arguments.
+        if arg_start_index != -1:
+            base_command = " ".join(gui_args[:arg_start_index])
+            gui_args_list = gui_args[arg_start_index:]
+        else:
+            # If no arguments, the whole command is the base command.
+            base_command = " ".join(gui_args)
+            gui_args_list = []
     else:
         gui_args_list = []
 
@@ -112,7 +121,6 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
     # Reconstruct the arguments string for the script
     # Each argument is on a new line for readability.
     args_list = []
-
     # List of arguments that should always be quoted
     quoted_args = ["--model", "--data", "--device", "--trip_net_num"]
 
