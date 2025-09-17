@@ -14,5 +14,4 @@ module load cuda-toolkit/11.8.0
 
 conda activate NeuroGraph
 
-cd /isilon/datalake/lcbn_research/final/beach/JonathanP
-srun python MakeTorchGraphData.py
+srun python ./src/utils/NandaToTorchGraphDataGUITest.py
