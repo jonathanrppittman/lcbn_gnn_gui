@@ -113,6 +113,14 @@ class MainWindow(QMainWindow):
         self.btn_convert.clicked.connect(self._run_conversion)
         actions_row.addWidget(self.btn_convert)
 
+        # Slurm config for conversion
+        self.slurm_conversion_group = QGroupBox("SLURM Configuration for Conversion")
+        slurm_conversion_layout = QVBoxLayout(self.slurm_conversion_group)
+        self.slurm_conversion_config_widget = SlurmConfigWidget(self.config, "slurm_conversion")
+        slurm_conversion_layout.addWidget(self.slurm_conversion_config_widget)
+        root.addWidget(self.slurm_conversion_group)
+        self.slurm_conversion_group.setVisible(False)
+
         # Training widgets
         train_row1 = QHBoxLayout()
         root.addLayout(train_row1)
@@ -141,14 +149,6 @@ class MainWindow(QMainWindow):
         train_row3.addWidget(QLabel("Extra args:"))
         self.train_args = QLineEdit(self.config["training"]["default_args"])
         train_row3.addWidget(self.train_args, 1)
-
-        # Slurm config for conversion
-        self.slurm_conversion_group = QGroupBox("SLURM Configuration for Conversion")
-        slurm_conversion_layout = QVBoxLayout(self.slurm_conversion_group)
-        self.slurm_conversion_config_widget = SlurmConfigWidget(self.config, "slurm_conversion")
-        slurm_conversion_layout.addWidget(self.slurm_conversion_config_widget)
-        root.addWidget(self.slurm_conversion_group)
-        self.slurm_conversion_group.setVisible(False)
 
         # Slurm config for training
         self.slurm_training_group = QGroupBox("SLURM Configuration for Training")
