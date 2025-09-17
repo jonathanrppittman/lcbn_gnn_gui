@@ -236,13 +236,22 @@ class MainWindow(QMainWindow):
         label_files: List[str] = [self.labels_list.item(i).text() for i in range(self.labels_list.count())]
         labels_str = " ".join(f'"{p}"' for p in label_files)
 
-        args_template = self.config["conversion"].get("default_args", "")
-        args_filled = self._format_args(args_template, {
-            "inputs": inputs_str,
-            "labels": labels_str,
-            "output_dir": f'"{out_dir}"'
-        })
-        command = f"{_detect_interpreter(script)} {args_filled}".strip()
+        # Ensure there's at least one label file, and take the first one.
+        if not label_files:
+            QMessageBox.warning(self, "No Label File", "Please add a .mat label file.")
+            return
+
+        label_file = label_files[0]  # The script expects a single label file.
+
+        # Construct the command with proper arguments.
+        command_parts = [
+            _detect_interpreter(script),
+            "--inputs", *[f'"{p}"' for p in input_files],
+            "--labels", f'"{label_file}"',
+            "--output_dir", f'"{out_dir}"'
+        ]
+
+        command = " ".join(command_parts)
 
         if self.use_slurm_conversion.isChecked():
             slurm_config = self.config.get("slurm_conversion", {})
@@ -253,7 +262,6 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
 
     def _run_training(self) -> None:
