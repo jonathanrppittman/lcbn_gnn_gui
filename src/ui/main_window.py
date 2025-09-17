@@ -109,9 +109,6 @@ class MainWindow(QMainWindow):
         self.use_slurm_conversion.toggled.connect(self._update_slurm_visibility)
         actions_row.addWidget(self.use_slurm_conversion)
         actions_row.addStretch(1)
-        self.btn_convert = QPushButton("Convert to .pt")
-        self.btn_convert.clicked.connect(self._run_conversion)
-        actions_row.addWidget(self.btn_convert)
 
         # Slurm config for conversion
         self.slurm_conversion_group = QGroupBox("SLURM Configuration for Conversion")
@@ -120,6 +117,13 @@ class MainWindow(QMainWindow):
         slurm_conversion_layout.addWidget(self.slurm_conversion_config_widget)
         root.addWidget(self.slurm_conversion_group)
         self.slurm_conversion_group.setVisible(False)
+
+        convert_button_row = QHBoxLayout()
+        root.addLayout(convert_button_row)
+        convert_button_row.addStretch(1)
+        self.btn_convert = QPushButton("Convert to .pt")
+        self.btn_convert.clicked.connect(self._run_conversion)
+        convert_button_row.addWidget(self.btn_convert)
 
         # Training widgets
         train_row1 = QHBoxLayout()
