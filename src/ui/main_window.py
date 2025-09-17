@@ -79,13 +79,21 @@ class MainWindow(QMainWindow):
         files_row.addLayout(inputs_col)
         inputs_col.addWidget(QLabel("Input Files:"))
         self.files_list = QListWidget()
+        self.files_list.setSelectionMode(QListWidget.ExtendedSelection)
         inputs_col.addWidget(self.files_list)
+        self.btn_remove_file = QPushButton("Remove Selected")
+        self.btn_remove_file.clicked.connect(self._remove_selected_input_file)
+        inputs_col.addWidget(self.btn_remove_file)
 
         labels_col = QVBoxLayout()
         files_row.addLayout(labels_col)
         labels_col.addWidget(QLabel("Label File(s):"))
         self.labels_list = QListWidget()
+        self.labels_list.setSelectionMode(QListWidget.ExtendedSelection)
         labels_col.addWidget(self.labels_list)
+        self.btn_remove_label = QPushButton("Remove Selected")
+        self.btn_remove_label.clicked.connect(self._remove_selected_label_file)
+        labels_col.addWidget(self.btn_remove_label)
 
         actions_row = QHBoxLayout()
         root.addLayout(actions_row)
@@ -211,6 +219,19 @@ class MainWindow(QMainWindow):
         )
         if path:
             self.dataset_file_input.setText(os.path.basename(path))
+
+    def _remove_selected_input_file(self) -> None:
+        self._remove_selected_from_list(self.files_list)
+
+    def _remove_selected_label_file(self) -> None:
+        self._remove_selected_from_list(self.labels_list)
+
+    def _remove_selected_from_list(self, list_widget: QListWidget) -> None:
+        selected_items = list_widget.selectedItems()
+        if not selected_items:
+            return
+        for item in selected_items:
+            list_widget.takeItem(list_widget.row(item))
 
     # ------------- Command builders -------------
     def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
