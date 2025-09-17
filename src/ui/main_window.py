@@ -72,6 +72,13 @@ class MainWindow(QMainWindow):
         btn_out.clicked.connect(self._pick_out_dir)
         add_files_row.addWidget(btn_out)
 
+        conv_opts_row = QHBoxLayout()
+        root.addLayout(conv_opts_row)
+        conv_opts_row.addWidget(QLabel("ROIs:"))
+        self.num_rois = QLineEdit("500")
+        conv_opts_row.addWidget(self.num_rois)
+        conv_opts_row.addStretch(1)
+
         files_row = QHBoxLayout()
         root.addLayout(files_row)
 
@@ -248,7 +255,8 @@ class MainWindow(QMainWindow):
             _detect_interpreter(script),
             "--inputs", *[f'"{p}"' for p in input_files],
             "--labels", f'"{label_file}"',
-            "--output_dir", f'"{out_dir}"'
+            "--output_dir", f'"{out_dir}"',
+            "--ROIs", self.num_rois.text().strip()
         ]
 
         command = " ".join(command_parts)
