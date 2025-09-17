@@ -56,8 +56,8 @@ def main():
     parser.add_argument('--num_labels', type=int, default=2, help='Number of labels for classification (default: 2).')
     parser.add_argument('--label_column', type=str, default='cddr15a', help='The column name in the labels file to use.')
     parser.add_argument('--threshold', type=float, default=0.05, help='Proportional threshold for connectivity matrix (default: 0.05).')
+    parser.add_argument('--ROIs', type=int, default=500, help='The number of ROIs examined (default 500).')
     args = parser.parse_args()
-
     # Load input data
     input_matrices = []
     for path in args.inputs:
@@ -130,7 +130,7 @@ def main():
     TorchGraph_Data = Data(x=x_all, edge_index=edge_index_all, y=y_all)
     data = (TorchGraph_Data, data2)
 
-    output_filename = f'NCandaData500_{args.label_column}_{int(args.threshold * 100)}pct.pt'
+    output_filename = f'NCandaData{args.ROIs}_{args.label_column}_{int(args.threshold * 100)}pct.pt'
     output_path = os.path.join(args.output_dir, output_filename)
     
     torch.save(data, output_path)
