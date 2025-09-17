@@ -14,4 +14,4 @@ module load cuda-toolkit/11.8.0
 
 conda activate NeuroGraph
 
-srun python ./src/utils/NandaToTorchGraphDataGUITest.py
+#COMMAND_PLACEHOLDER
