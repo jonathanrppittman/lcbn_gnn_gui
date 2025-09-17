@@ -13,7 +13,7 @@
 module purge
 module load cuda-toolkit/11.8.0
 
-conda activate NeuroGraph
+conda activate /isilon/datalake/lcbn_research/final/software/LCBN/miniconda3/envs/NeuroGraph
 
 cd /isilon/datalake/lcbn_research/final/beach/JonathanP/NeuroGraph
 srun python main_NCanda.py \
