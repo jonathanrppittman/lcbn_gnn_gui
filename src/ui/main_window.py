@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
         self.btn_add_dir.clicked.connect(self._add_folder)
         add_files_row.addWidget(self.btn_add_dir)
         add_files_row.addWidget(QLabel("Output dir:"))
-        self.out_dir = QLineEdit(self.config.get("workspace_dir", ""))
+        self.out_dir = QLineEdit(os.path.join("..", "NeuroGraph", "data", "NCanda", "raw"))
         add_files_row.addWidget(self.out_dir, 1)
         btn_out = QPushButton("Browse")
         btn_out.clicked.connect(self._pick_out_dir)

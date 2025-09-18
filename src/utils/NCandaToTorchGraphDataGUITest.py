@@ -52,7 +52,7 @@ def main():
     parser = argparse.ArgumentParser(description="Convert NCANDA .mat files to PyTorch Geometric data.")
     parser.add_argument('--inputs', type=str, nargs='+', required=True, help='List of input .mat file paths.')
     parser.add_argument('--labels', type=str, required=True, help='Path to the labels .mat file.')
-    parser.add_argument('--output_dir', type=str, required=True, help='Directory to save the output .pt file.')
+    parser.add_argument('--output_dir', type=str, default=os.path.join("..", "NeuroGraph", "data", "NCanda", "raw"), help='Directory to save the output .pt file. Defaults to ../NeuroGraph/data/NCanda/raw')
     parser.add_argument('--num_labels', type=int, default=2, help='Number of labels for classification (default: 2).')
     parser.add_argument('--label_column', type=str, default='cddr15a', help='The column name in the labels file to use.')
     parser.add_argument('--threshold', type=float, default=0.05, help='Proportional threshold for connectivity matrix (default: 0.05).')
