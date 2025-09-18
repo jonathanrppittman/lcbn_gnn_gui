@@ -3,7 +3,7 @@ import os
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QFileDialog, QMessageBox, QApplication,
     QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit,
-    QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox
+    QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox, QScrollArea
 )
 from PyQt5.QtCore import Qt
 import re
@@ -29,9 +29,12 @@ class MainWindow(QMainWindow):
         self.runner = None  # type: CommandRunner
         self.dataset_file_path = None
 
-        central = QWidget(self)
-        self.setCentralWidget(central)
-        root = QVBoxLayout(central)
+        scroll = QScrollArea()
+        self.setCentralWidget(scroll)
+        scroll.setWidgetResizable(True)
+        scroll_content = QWidget(scroll)
+        scroll.setWidget(scroll_content)
+        root = QVBoxLayout(scroll_content)
 
         # Theme switcher
         theme_row = QHBoxLayout()
