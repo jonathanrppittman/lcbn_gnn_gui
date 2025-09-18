@@ -2,16 +2,16 @@ import os
 import subprocess
 from typing import Dict, Any
 import re
+from datetime import datetime
 
-def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any]) -> str:
+def update_slurm_script(template_path: str, command: str, slurm_cfg: Dict[str, Any], jobs_dir: str) -> str:
     """
-    Updates the specified SLURM script file with a command by replacing a placeholder.
-    This function overwrites the script.
+    Creates a new SLURM script based on a template, filling in a command and SBATCH directives.
     """
-    if not os.path.exists(script_path):
-        raise FileNotFoundError(f"SLURM script not found at: {script_path}")
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"SLURM script template not found at: {template_path}")
 
-    with open(script_path, "r") as f:
+    with open(template_path, "r") as f:
         content = f.read()
 
     # Mapping from config key to SBATCH directive
@@ -43,12 +43,18 @@ def update_slurm_script(script_path: str, command: str, slurm_cfg: Dict[str, Any
     # Replace the placeholder with the new command
     content = content.replace("#COMMAND_PLACEHOLDER", new_command_str)
 
-    # Overwrite the original script
-    with open(script_path, "w", encoding="utf-8") as f:
-        f.write(content)
-    os.chmod(script_path, 0o750)
+    # Create a new script in the jobs directory
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    job_name = slurm_cfg.get("job_name", "gnn_job").replace(" ", "_")
+    new_script_filename = f"{job_name}_{timestamp}.sh"
+    new_script_path = os.path.join(jobs_dir, new_script_filename)
 
-    return script_path
+    os.makedirs(jobs_dir, exist_ok=True)
+    with open(new_script_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    os.chmod(new_script_path, 0o750)
+
+    return new_script_path
 
 
 def submit_job(script_path: str) -> subprocess.CompletedProcess:
