@@ -27,6 +27,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("GNN GUI")
         self.config = load_config()
         self.runner = None  # type: CommandRunner
+        self.dataset_file_path = None
 
         central = QWidget(self)
         self.setCentralWidget(central)
@@ -229,6 +230,7 @@ class MainWindow(QMainWindow):
             self, "Select dataset file", filter="PyTorch data (*.pt);;All files (*)"
         )
         if path:
+            self.dataset_file_path = path
             self.dataset_file_input.setText(os.path.basename(path))
 
     def _remove_selected_input_file(self) -> None:
@@ -288,7 +290,9 @@ class MainWindow(QMainWindow):
 
         if self.use_slurm_conversion.isChecked():
             slurm_config = self.config.get("slurm_conversion", {})
-            script_path = update_slurm_script("src/utils/MakeTorchGraphData.sh", command, slurm_config)
+            script_path = update_slurm_script(
+                "src/utils/MakeTorchGraphData.sh", command, slurm_config, self.config["jobs_dir"]
+            )
             result = submit_job(script_path)
             if result.returncode == 0:
                 self._append_console(f"Submitted job: {result.stdout}")
@@ -322,8 +326,10 @@ class MainWindow(QMainWindow):
         # Define the arguments from the GUI
         gui_args = {
             "--model": model_script_name,
-            "--data": dataset
+            "--data": dataset,
         }
+        if self.dataset_file_path:
+            gui_args["--path"] = os.path.dirname(self.dataset_file_path)
 
         # Split the base arguments string into a list
         args_list = shlex.split(args_text)
@@ -355,7 +361,7 @@ class MainWindow(QMainWindow):
             python_script = "main_NCanda.py"
             command = f"python {python_script} {args_filled}".strip()
             slurm_config = self.config.get("slurm_training", {})
-            script_path = update_slurm_script(script, command, slurm_config)
+            script_path = update_slurm_script(script, command, slurm_config, self.config["jobs_dir"])
             result = submit_job(script_path)
             if result.returncode == 0:
                 self._append_console(f"Submitted: {result.stdout}")
