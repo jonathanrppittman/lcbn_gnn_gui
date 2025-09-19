@@ -1,0 +1,4 @@
+/isilon/datalake/lcbn_research/final/beach/JonathanP/lcbn_gnn_gui/src/utils/NCandaToTorchGraphDataGUITest.py:110: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:278.)
+  edge_index = torch.tensor([row, col], dtype=torch.long)
+/isilon/datalake/lcbn_research/final/beach/JonathanP/lcbn_gnn_gui/src/utils/NCandaToTorchGraphDataGUITest.py:114: DeprecationWarning: an integer is required (got type float).  Implicit conversion to integers using __int__ is deprecated, and may be removed in a future version of Python.
+  labels.append(torch.tensor(cleaned_column[i], dtype=torch.long))
