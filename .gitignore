@@ -43,6 +43,7 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
 # Environment variables
 .env
@@ -50,6 +51,9 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+
+#jobs
+jobs/
 
 #converted data
 *.pt
