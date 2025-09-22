@@ -268,10 +268,8 @@ class MainWindow(QMainWindow):
         os.makedirs(out_dir, exist_ok=True)
 
         input_files: List[str] = [self.files_list.item(i).text() for i in range(self.files_list.count())]
-        inputs_str = " ".join(f'"{p}"' for p in input_files)
 
         label_files: List[str] = [self.labels_list.item(i).text() for i in range(self.labels_list.count())]
-        labels_str = " ".join(f'"{p}"' for p in label_files)
 
         # Ensure there's at least one label file, and take the first one.
         if not label_files:
