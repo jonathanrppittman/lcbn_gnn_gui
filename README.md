@@ -39,4 +39,3 @@ python src/main.py
   - `{dataset_dir}`: selected dataset directory (.pt files)
   - `{model}`: selected model key from the dropdown
 - Job scripts are saved under `jobs/` and logs under `logs/`.
-
