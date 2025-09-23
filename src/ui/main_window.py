@@ -277,23 +277,29 @@ class MainWindow(QMainWindow):
         self.param_widgets = {}
 
         for key, value in params.items():
-            if key in ["--data", "--model", "--path"]:
-                continue  # These are handled by other widgets
+            if key == "--path":
+                continue
 
-            label = QLabel(key)
-            widget = QLineEdit(str(value))
-            self.train_params_layout.addRow(label, widget)
-            self.param_widgets[key] = widget
+            if key == "--model":
+                model_name = str(value)
+                model_map_inv = {v: k for k, v in self.model_map.items()}
+                self.model_combo.setCurrentText(model_map_inv.get(model_name, "GAT"))
+            elif key == "--data":
+                dataset_filename = str(value)
+                self.dataset_file_input.setText(dataset_filename)
+                if "--path" in params and dataset_filename:
+                    self.dataset_file_path = os.path.join(params["--path"], dataset_filename)
+            else:
+                label = QLabel(key)
+                widget = QLineEdit(str(value))
+                self.train_params_layout.addRow(label, widget)
+                self.param_widgets[key] = widget
 
-        # Set the values for the dedicated widgets
-        model_name = params.get("--model", "GATConv")
-        model_map_inv = {v: k for k, v in self.model_map.items()}
-        self.model_combo.setCurrentText(model_map_inv.get(model_name, "GAT"))
-
-        dataset_filename = params.get("--data", "")
-        self.dataset_file_input.setText(dataset_filename)
-        if "--path" in params and dataset_filename:
-            self.dataset_file_path = os.path.join(params["--path"], dataset_filename)
+        # Set defaults for dedicated widgets if not in params
+        if "--model" not in params:
+            self.model_combo.setCurrentText("GAT")
+        if "--data" not in params:
+            self.dataset_file_input.setText("")
 
     # ------------- Command builders -------------
     def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
@@ -388,17 +394,10 @@ class MainWindow(QMainWindow):
         except IOError as e:
             QMessageBox.warning(self, "Save failed", f"Could not save training parameters to file: {e}")
 
-        # Construct the command from the parameters
-        args_list = []
-        for key, value in params.items():
-            args_list.append(str(key))
-            args_list.append(str(value))
-
-        args_filled = " ".join(shlex.quote(arg) for arg in args_list)
-
+        # The training script is expected to read parameters from the JSON file.
         if self.use_slurm.isChecked():
             python_script = "main_NCanda.py"
-            command = f"python {python_script} {args_filled}".strip()
+            command = f"python {python_script}".strip()
             slurm_config = self.config.get("slurm_training", {})
             script_path = update_slurm_script(script, command, slurm_config, self.config["jobs_dir"])
             result = submit_job(script_path)
@@ -407,7 +406,7 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            command = f"{_detect_interpreter(script)} {args_filled}".strip()
+            command = f"{_detect_interpreter(script)}".strip()
             self._start_command(command)
 
     # ------------- Runner -------------
