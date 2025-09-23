@@ -1,9 +1,10 @@
 from typing import List, Dict
 import os
+import json
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QFileDialog, QMessageBox, QApplication,
     QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit,
-    QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox, QScrollArea
+    QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox, QScrollArea, QFormLayout
 )
 from PyQt5.QtCore import Qt
 import re
@@ -28,6 +29,15 @@ class MainWindow(QMainWindow):
         self.config = load_config()
         self.runner = None  # type: CommandRunner
         self.dataset_file_path = None
+        self.param_widgets = {}
+
+        self.model_map = {
+            "GCN": "GCNConv",
+            "GAT": "GATConv",
+            "GATv2": "GATv2Conv",
+            "GraphSAGE": "SAGEConv",
+            "GTransformer": "TransformerConv",
+        }
 
         scroll = QScrollArea()
         self.setCentralWidget(scroll)
@@ -152,11 +162,14 @@ class MainWindow(QMainWindow):
         root.addLayout(train_row3)
         train_row3.addWidget(QLabel("Model:"))
         self.model_combo = QComboBox()
-        self.model_combo.addItems(["GCN", "GAT", "GATv2", "GraphSAGE", "GTransformer"])
+        self.model_combo.addItems(list(self.model_map.keys()))
         train_row3.addWidget(self.model_combo)
-        train_row3.addWidget(QLabel("Extra args:"))
-        self.train_args = QLineEdit(self.config["training"]["default_args"])
-        train_row3.addWidget(self.train_args, 1)
+        train_row3.addStretch(1)
+
+        # Training parameters editor
+        self.train_params_group = QGroupBox("Training Parameters")
+        self.train_params_layout = QFormLayout(self.train_params_group)
+        root.addWidget(self.train_params_group)
 
         # Slurm config for training
         self.slurm_training_group = QGroupBox("SLURM Configuration for Training")
@@ -185,6 +198,7 @@ class MainWindow(QMainWindow):
         # Persist on close
         self.destroyed.connect(self._persist_config)
 
+        self._setup_training_params()
         self._update_slurm_visibility()
 
     # ------------- UI Handlers -------------
@@ -249,6 +263,38 @@ class MainWindow(QMainWindow):
         for item in selected_items:
             list_widget.takeItem(list_widget.row(item))
 
+    def _setup_training_params(self):
+        try:
+            with open("src/utils/training_params.json", "r") as f:
+                params = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            QMessageBox.warning(self, "Could not load training params", f"Could not load or parse training_params.json: {e}")
+            params = {}
+
+        # Clear existing widgets
+        for i in reversed(range(self.train_params_layout.count())):
+            self.train_params_layout.itemAt(i).widget().setParent(None)
+        self.param_widgets = {}
+
+        for key, value in params.items():
+            if key in ["--data", "--model", "--path"]:
+                continue  # These are handled by other widgets
+
+            label = QLabel(key)
+            widget = QLineEdit(str(value))
+            self.train_params_layout.addRow(label, widget)
+            self.param_widgets[key] = widget
+
+        # Set the values for the dedicated widgets
+        model_name = params.get("--model", "GATConv")
+        model_map_inv = {v: k for k, v in self.model_map.items()}
+        self.model_combo.setCurrentText(model_map_inv.get(model_name, "GAT"))
+
+        dataset_filename = params.get("--data", "")
+        self.dataset_file_input.setText(dataset_filename)
+        if "--path" in params and dataset_filename:
+            self.dataset_file_path = os.path.join(params["--path"], dataset_filename)
+
     # ------------- Command builders -------------
     def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
         result = template
@@ -307,58 +353,50 @@ class MainWindow(QMainWindow):
         if not script:
             QMessageBox.warning(self, "Missing script", "Please select a training script.")
             return
+
+        # Gather parameters from the dynamically generated widgets
+        params = {}
+        for key, widget in self.param_widgets.items():
+            value = widget.text().strip()
+            # Attempt to convert to number if possible, else keep as string
+            try:
+                if '.' in value:
+                    params[key] = float(value)
+                else:
+                    params[key] = int(value)
+            except ValueError:
+                params[key] = value
+
+        # Add parameters from dedicated widgets
         dataset = self.dataset_file_input.text().strip()
         if not dataset:
             QMessageBox.warning(self, "Missing dataset", "Please select a dataset file (.pt).")
             return
+        params["--data"] = dataset
 
-        model_map = {
-            "GCN": "GCNConv",
-            "GAT": "GATConv",
-            "GATv2": "GATv2Conv",
-            "GraphSAGE": "SAGEConv",
-            "GTransformer": "TransformerConv",
-        }
         model_display_name = self.model_combo.currentText()
-        model_script_name = model_map.get(model_display_name, model_display_name)
+        model_script_name = self.model_map.get(model_display_name, model_display_name)
+        params["--model"] = model_script_name
 
-        args_text = self.train_args.text().strip() or self.config["training"].get("default_args", "")
-
-        # Define the arguments from the GUI
-        gui_args = {
-            "--model": model_script_name,
-            "--data": dataset,
-        }
         if self.dataset_file_path:
-            gui_args["--path"] = os.path.dirname(self.dataset_file_path)
+            params["--path"] = os.path.dirname(self.dataset_file_path)
 
-        # Split the base arguments string into a list
-        args_list = shlex.split(args_text)
+        # Save the updated parameters back to the JSON file
+        try:
+            with open("src/utils/training_params.json", "w") as f:
+                json.dump(params, f, indent=4)
+        except IOError as e:
+            QMessageBox.warning(self, "Save failed", f"Could not save training parameters to file: {e}")
 
-        # Remove any existing instances of the GUI-controlled arguments
-        for key in gui_args:
-            if key in args_list:
-                try:
-                    # Find the index of the argument and remove it and its value
-                    idx = args_list.index(key)
-                    args_list.pop(idx)  # Remove the key
-                    if idx < len(args_list) and not args_list[idx].startswith('-'):
-                        args_list.pop(idx)  # Remove the value
-                except ValueError:
-                    # The key is not in the list, so we can ignore it
-                    pass
+        # Construct the command from the parameters
+        args_list = []
+        for key, value in params.items():
+            args_list.append(str(key))
+            args_list.append(str(value))
 
-        # Now, add the GUI arguments to the list
-        for key, value in gui_args.items():
-            args_list.append(key)
-            args_list.append(value)
-
-        # Join the arguments back into a string
         args_filled = " ".join(shlex.quote(arg) for arg in args_list)
-        # If using SLURM, the command to run is a python script inside the sbatch script.
-        # Otherwise, it's the script from the input field.
+
         if self.use_slurm.isChecked():
-            # TODO: Make the python script name configurable
             python_script = "main_NCanda.py"
             command = f"python {python_script} {args_filled}".strip()
             slurm_config = self.config.get("slurm_training", {})
