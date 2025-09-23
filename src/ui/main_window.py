@@ -4,7 +4,7 @@ import json
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QFileDialog, QMessageBox, QApplication,
     QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit,
-    QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox, QScrollArea
+    QLabel, QComboBox, QTextEdit, QCheckBox, QGroupBox, QScrollArea, QFormLayout
 )
 from PyQt5.QtCore import Qt
 import re
@@ -29,6 +29,7 @@ class MainWindow(QMainWindow):
         self.config = load_config()
         self.runner = None  # type: CommandRunner
         self.dataset_file_path = None
+        self.param_widgets = {}
 
         self.model_map = {
             "GCN": "GCNConv",
@@ -167,11 +168,7 @@ class MainWindow(QMainWindow):
 
         # Training parameters editor
         self.train_params_group = QGroupBox("Training Parameters")
-        train_params_layout = QVBoxLayout(self.train_params_group)
-        self.train_params_editor = QTextEdit()
-        self.train_params_editor.setPlaceholderText("JSON training parameters")
-        self.train_params_editor.setMinimumHeight(150)
-        train_params_layout.addWidget(self.train_params_editor)
+        self.train_params_layout = QFormLayout(self.train_params_group)
         root.addWidget(self.train_params_group)
 
         # Slurm config for training
@@ -201,7 +198,7 @@ class MainWindow(QMainWindow):
         # Persist on close
         self.destroyed.connect(self._persist_config)
 
-        self._load_training_params()
+        self._setup_training_params()
         self._update_slurm_visibility()
 
     # ------------- UI Handlers -------------
@@ -266,25 +263,37 @@ class MainWindow(QMainWindow):
         for item in selected_items:
             list_widget.takeItem(list_widget.row(item))
 
-    def _load_training_params(self):
+    def _setup_training_params(self):
         try:
             with open("src/utils/training_params.json", "r") as f:
                 params = json.load(f)
-            self.train_params_editor.setText(json.dumps(params, indent=4))
-            # Set model combo based on params
-            model_name = params.get("--model", "GATConv")
-            model_map_inv = {v: k for k, v in self.model_map.items()}
-            self.model_combo.setCurrentText(model_map_inv.get(model_name, "GAT"))
-            # Set dataset file input
-            dataset_filename = params.get("--data", "")
-            self.dataset_file_input.setText(dataset_filename)
-            # If we have a path in config, we can try to reconstruct the full path
-            if "--path" in params and dataset_filename:
-                self.dataset_file_path = os.path.join(params["--path"], dataset_filename)
-
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            self.train_params_editor.setText("{\n\n}")
-            QMessageBox.warning(self, "Could not load training params", str(e))
+            QMessageBox.warning(self, "Could not load training params", f"Could not load or parse training_params.json: {e}")
+            params = {}
+
+        # Clear existing widgets
+        for i in reversed(range(self.train_params_layout.count())):
+            self.train_params_layout.itemAt(i).widget().setParent(None)
+        self.param_widgets = {}
+
+        for key, value in params.items():
+            if key in ["--data", "--model", "--path"]:
+                continue  # These are handled by other widgets
+
+            label = QLabel(key)
+            widget = QLineEdit(str(value))
+            self.train_params_layout.addRow(label, widget)
+            self.param_widgets[key] = widget
+
+        # Set the values for the dedicated widgets
+        model_name = params.get("--model", "GATConv")
+        model_map_inv = {v: k for k, v in self.model_map.items()}
+        self.model_combo.setCurrentText(model_map_inv.get(model_name, "GAT"))
+
+        dataset_filename = params.get("--data", "")
+        self.dataset_file_input.setText(dataset_filename)
+        if "--path" in params and dataset_filename:
+            self.dataset_file_path = os.path.join(params["--path"], dataset_filename)
 
     # ------------- Command builders -------------
     def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
@@ -345,13 +354,20 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Missing script", "Please select a training script.")
             return
 
-        params_text = self.train_params_editor.toPlainText()
-        try:
-            params = json.loads(params_text)
-        except json.JSONDecodeError as e:
-            QMessageBox.critical(self, "Invalid JSON", f"The training parameters are not valid JSON.\n{e}")
-            return
+        # Gather parameters from the dynamically generated widgets
+        params = {}
+        for key, widget in self.param_widgets.items():
+            value = widget.text().strip()
+            # Attempt to convert to number if possible, else keep as string
+            try:
+                if '.' in value:
+                    params[key] = float(value)
+                else:
+                    params[key] = int(value)
+            except ValueError:
+                params[key] = value
 
+        # Add parameters from dedicated widgets
         dataset = self.dataset_file_input.text().strip()
         if not dataset:
             QMessageBox.warning(self, "Missing dataset", "Please select a dataset file (.pt).")
@@ -364,8 +380,6 @@ class MainWindow(QMainWindow):
 
         if self.dataset_file_path:
             params["--path"] = os.path.dirname(self.dataset_file_path)
-        elif "--path" in params:
-            del params["--path"]
 
         # Save the updated parameters back to the JSON file
         try:
