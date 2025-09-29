@@ -394,10 +394,17 @@ class MainWindow(QMainWindow):
         except IOError as e:
             QMessageBox.warning(self, "Save failed", f"Could not save training parameters to file: {e}")
 
-        # The training script is expected to read parameters from the JSON file.
+        # Construct the command from the parameters
+        args_list = []
+        for key, value in params.items():
+            args_list.append(str(key))
+            args_list.append(str(value))
+
+        args_filled = " ".join(shlex.quote(arg) for arg in args_list)
+
         if self.use_slurm.isChecked():
             python_script = "main_NCanda.py"
-            command = f"python {python_script}".strip()
+            command = f"python {python_script} {args_filled}".strip()
             slurm_config = self.config.get("slurm_training", {})
             script_path = update_slurm_script(script, command, slurm_config, self.config["jobs_dir"])
             result = submit_job(script_path)
@@ -406,7 +413,7 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            command = f"{_detect_interpreter(script)}".strip()
+            command = f"{_detect_interpreter(script)} {args_filled}".strip()
             self._start_command(command)
 
     # ------------- Runner -------------
