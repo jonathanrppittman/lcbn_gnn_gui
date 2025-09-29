@@ -1,3 +1,0 @@
-Tasks shape: (500, 500, 3674)
-Cleaned Column Length: 3674
-Saved data to ../NeuroGraph/data/NCanda/raw/NCandaData500_cddr15a_5pct.pt
