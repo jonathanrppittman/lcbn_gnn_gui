@@ -30,6 +30,7 @@ class MainWindow(QMainWindow):
         self.runner = None  # type: CommandRunner
         self.dataset_file_path = None
         self.param_widgets = {}
+        self.is_submitting = False
 
         self.model_map = {
             "GCN": "GCNConv",
@@ -277,23 +278,29 @@ class MainWindow(QMainWindow):
         self.param_widgets = {}
 
         for key, value in params.items():
-            if key in ["--data", "--model", "--path"]:
-                continue  # These are handled by other widgets
+            if key == "--path":
+                continue
 
-            label = QLabel(key)
-            widget = QLineEdit(str(value))
-            self.train_params_layout.addRow(label, widget)
-            self.param_widgets[key] = widget
+            if key == "--model":
+                model_name = str(value)
+                model_map_inv = {v: k for k, v in self.model_map.items()}
+                self.model_combo.setCurrentText(model_map_inv.get(model_name, "GAT"))
+            elif key == "--data":
+                dataset_filename = str(value)
+                self.dataset_file_input.setText(dataset_filename)
+                if "--path" in params and dataset_filename:
+                    self.dataset_file_path = os.path.join(params["--path"], dataset_filename)
+            else:
+                label = QLabel(key)
+                widget = QLineEdit(str(value))
+                self.train_params_layout.addRow(label, widget)
+                self.param_widgets[key] = widget
 
-        # Set the values for the dedicated widgets
-        model_name = params.get("--model", "GATConv")
-        model_map_inv = {v: k for k, v in self.model_map.items()}
-        self.model_combo.setCurrentText(model_map_inv.get(model_name, "GAT"))
-
-        dataset_filename = params.get("--data", "")
-        self.dataset_file_input.setText(dataset_filename)
-        if "--path" in params and dataset_filename:
-            self.dataset_file_path = os.path.join(params["--path"], dataset_filename)
+        # Set defaults for dedicated widgets if not in params
+        if "--model" not in params:
+            self.model_combo.setCurrentText("GAT")
+        if "--data" not in params:
+            self.dataset_file_input.setText("")
 
     # ------------- Command builders -------------
     def _format_args(self, template: str, mapping: Dict[str, str]) -> str:
@@ -349,66 +356,75 @@ class MainWindow(QMainWindow):
             self._start_command(command)
 
     def _run_training(self) -> None:
-        script = self.train_script.text().strip()
-        if not script:
-            QMessageBox.warning(self, "Missing script", "Please select a training script.")
+        if self.is_submitting:
+            QMessageBox.warning(self, "Busy", "A job is already being submitted, please wait.")
             return
 
-        # Gather parameters from the dynamically generated widgets
-        params = {}
-        for key, widget in self.param_widgets.items():
-            value = widget.text().strip()
-            # Attempt to convert to number if possible, else keep as string
-            try:
-                if '.' in value:
-                    params[key] = float(value)
-                else:
-                    params[key] = int(value)
-            except ValueError:
-                params[key] = value
-
-        # Add parameters from dedicated widgets
-        dataset = self.dataset_file_input.text().strip()
-        if not dataset:
-            QMessageBox.warning(self, "Missing dataset", "Please select a dataset file (.pt).")
-            return
-        params["--data"] = dataset
-
-        model_display_name = self.model_combo.currentText()
-        model_script_name = self.model_map.get(model_display_name, model_display_name)
-        params["--model"] = model_script_name
-
-        if self.dataset_file_path:
-            params["--path"] = os.path.dirname(self.dataset_file_path)
-
-        # Save the updated parameters back to the JSON file
         try:
-            with open("src/utils/training_params.json", "w") as f:
-                json.dump(params, f, indent=4)
-        except IOError as e:
-            QMessageBox.warning(self, "Save failed", f"Could not save training parameters to file: {e}")
+            self.is_submitting = True
+            script = self.train_script.text().strip()
+            if not script:
+                QMessageBox.warning(self, "Missing script", "Please select a training script.")
+                return
 
-        # Construct the command from the parameters
-        args_list = []
-        for key, value in params.items():
-            args_list.append(str(key))
-            args_list.append(str(value))
+            # Gather parameters from the dynamically generated widgets
+            params = {}
+            for key, widget in self.param_widgets.items():
+                value = widget.text().strip()
+                # Attempt to convert to number if possible, else keep as string
+                try:
+                    if '.' in value:
+                        params[key] = float(value)
+                    else:
+                        params[key] = int(value)
+                except ValueError:
+                    params[key] = value
 
-        args_filled = " ".join(shlex.quote(arg) for arg in args_list)
+            # Add parameters from dedicated widgets
+            dataset = self.dataset_file_input.text().strip()
+            if not dataset:
+                QMessageBox.warning(self, "Missing dataset", "Please select a dataset file (.pt).")
+                return
+            params["--data"] = dataset
 
-        if self.use_slurm.isChecked():
-            python_script = "main_NCanda.py"
-            command = f"python {python_script} {args_filled}".strip()
-            slurm_config = self.config.get("slurm_training", {})
-            script_path = update_slurm_script(script, command, slurm_config, self.config["jobs_dir"])
-            result = submit_job(script_path)
-            if result.returncode == 0:
-                self._append_console(f"Submitted: {result.stdout}")
+            model_display_name = self.model_combo.currentText()
+            model_script_name = self.model_map.get(model_display_name, model_display_name)
+            params["--model"] = model_script_name
+
+            if self.dataset_file_path:
+                params["--path"] = os.path.dirname(self.dataset_file_path)
+
+            # Save the updated parameters back to the JSON file
+            try:
+                with open("src/utils/training_params.json", "w") as f:
+                    json.dump(params, f, indent=4)
+            except IOError as e:
+                QMessageBox.warning(self, "Save failed", f"Could not save training parameters to file: {e}")
+                return
+
+            # Construct the command from the parameters
+            args_list = []
+            for key, value in params.items():
+                args_list.append(str(key))
+                args_list.append(str(value))
+
+            args_filled = " ".join(shlex.quote(arg) for arg in args_list)
+
+            if self.use_slurm.isChecked():
+                python_script = "main_NCanda.py"
+                command = f"python {python_script} {args_filled}".strip()
+                slurm_config = self.config.get("slurm_training", {})
+                script_path = update_slurm_script(script, command, slurm_config, self.config["jobs_dir"])
+                result = submit_job(script_path)
+                if result.returncode == 0:
+                    self._append_console(f"Submitted: {result.stdout}")
+                else:
+                    self._append_console(f"SLURM submit failed: {result.stderr}")
             else:
-                self._append_console(f"SLURM submit failed: {result.stderr}")
-        else:
-            command = f"{_detect_interpreter(script)} {args_filled}".strip()
-            self._start_command(command)
+                command = f"{_detect_interpreter(script)} {args_filled}".strip()
+                self._start_command(command)
+        finally:
+            self.is_submitting = False
 
     # ------------- Runner -------------
     def _start_command(self, command: str) -> None:
