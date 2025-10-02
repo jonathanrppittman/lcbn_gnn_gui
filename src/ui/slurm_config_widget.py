@@ -37,12 +37,12 @@ class SlurmConfigWidget(QWidget):
             self.config[self.config_key] = {}
         slurm_config = self.config[self.config_key]
         self.job_name.setText(slurm_config.get("job_name", "MakeTorchGraphData"))
-        self.output.setText(slurm_config.get("output", ""))
-        self.error.setText(slurm_config.get("error", ""))
+        self.output.setText(slurm_config.get("output", "./logs/train_out.txt"))
+        self.error.setText(slurm_config.get("error", "./logs/train_err.txt"))
         self.partition.setCurrentText(slurm_config.get("partition", "gpu-h100"))
         self.gpus.setValue(int(slurm_config.get("gpus", 2)))
         self.mem.setText(slurm_config.get("mem", "700000M"))
-        self.time.setText(slurm_config.get("time", "24:00:00"))
+        self.time.setText(slurm_config.get("time", "04:00:00"))
         self.additional.setText(slurm_config.get("additional", ""))
         self.env_activation.setText(slurm_config.get("env_activation", ""))
 
