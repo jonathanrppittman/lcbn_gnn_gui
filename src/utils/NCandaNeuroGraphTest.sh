@@ -26,5 +26,4 @@ srun python main_NCanda.py \
   --threshold 0.1 \
   --num_nodes 500 \
   --epochs 500 \
-  --early_stopping 10 \
-  --trip_net_num '3'
+  --early_stopping 10
