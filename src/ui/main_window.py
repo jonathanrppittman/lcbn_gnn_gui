@@ -22,6 +22,10 @@ def _detect_interpreter(script_path: str) -> str:
     return script_path
 
 
+def _format_label(text: str) -> str:
+    return text.replace("--", "").replace("_", " ").title()
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -168,7 +172,7 @@ class MainWindow(QMainWindow):
         train_row3.addStretch(1)
 
         # Training parameters editor
-        self.train_params_group = QGroupBox("Training Parameters")
+        self.train_params_group = QGroupBox("Training Arguments")
         self.train_params_layout = QFormLayout(self.train_params_group)
         root.addWidget(self.train_params_group)
 
@@ -266,10 +270,10 @@ class MainWindow(QMainWindow):
 
     def _setup_training_params(self):
         try:
-            with open("src/utils/training_params.json", "r") as f:
+            with open("src/utils/training_args.json", "r") as f:
                 params = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            QMessageBox.warning(self, "Could not load training params", f"Could not load or parse training_params.json: {e}")
+            QMessageBox.warning(self, "Could not load training params", f"Could not load or parse training_args.json: {e}")
             params = {}
 
         # Clear existing widgets
@@ -291,7 +295,7 @@ class MainWindow(QMainWindow):
                 if "--path" in params and dataset_filename:
                     self.dataset_file_path = os.path.join(params["--path"], dataset_filename)
             else:
-                label = QLabel(key)
+                label = QLabel(_format_label(key))
                 widget = QLineEdit(str(value))
                 self.train_params_layout.addRow(label, widget)
                 self.param_widgets[key] = widget
@@ -396,10 +400,10 @@ class MainWindow(QMainWindow):
 
             # Save the updated parameters back to the JSON file
             try:
-                with open("src/utils/training_params.json", "w") as f:
+                with open("src/utils/training_args.json", "w") as f:
                     json.dump(params, f, indent=4)
             except IOError as e:
-                QMessageBox.warning(self, "Save failed", f"Could not save training parameters to file: {e}")
+                QMessageBox.warning(self, "Save failed", f"Could not save training arguments to file: {e}")
                 return
 
             # Construct the command from the parameters
