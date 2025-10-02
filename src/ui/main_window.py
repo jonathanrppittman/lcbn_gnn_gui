@@ -23,6 +23,8 @@ def _detect_interpreter(script_path: str) -> str:
 
 
 def _format_label(text: str) -> str:
+    if text == "--early_stopping":
+        return "Early Stopping (epochs)"
     return text.replace("--", "").replace("_", " ").title()
 
 
