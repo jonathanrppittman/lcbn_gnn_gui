@@ -16,7 +16,7 @@ class CommandRunner(QThread):
 
     def run(self) -> None:
         proc = subprocess.Popen([
-            "/usr/bin/bash", "-lc", self.command
+            "/usr/bin/bash", "-c", self.command
         ], cwd=self.working_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=self.env, bufsize=1)
         assert proc.stdout is not None
         for line in proc.stdout:
