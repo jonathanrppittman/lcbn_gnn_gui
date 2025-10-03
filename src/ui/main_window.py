@@ -134,7 +134,9 @@ class MainWindow(QMainWindow):
         # Slurm config for conversion
         self.slurm_conversion_group = QGroupBox("SLURM Configuration for Conversion")
         slurm_conversion_layout = QVBoxLayout(self.slurm_conversion_group)
-        self.slurm_conversion_config_widget = SlurmConfigWidget(self.config, "slurm_conversion")
+        self.slurm_conversion_config_widget = SlurmConfigWidget(
+            self.config, "slurm_conversion", default_job_name="MakeTorchGraphData"
+        )
         slurm_conversion_layout.addWidget(self.slurm_conversion_config_widget)
         root.addWidget(self.slurm_conversion_group)
         self.slurm_conversion_group.setVisible(False)
@@ -181,7 +183,9 @@ class MainWindow(QMainWindow):
         # Slurm config for training
         self.slurm_training_group = QGroupBox("SLURM Configuration for Training")
         slurm_training_layout = QVBoxLayout(self.slurm_training_group)
-        self.slurm_training_config_widget = SlurmConfigWidget(self.config, "slurm_training")
+        self.slurm_training_config_widget = SlurmConfigWidget(
+            self.config, "slurm_training", default_job_name="LCBN_GNN_Training"
+        )
         slurm_training_layout.addWidget(self.slurm_training_config_widget)
         root.addWidget(self.slurm_training_group)
         self.slurm_training_group.setVisible(False)
