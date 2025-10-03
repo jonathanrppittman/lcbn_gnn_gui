@@ -1,10 +1,11 @@
 from PyQt5.QtWidgets import QWidget, QLineEdit, QSpinBox, QFormLayout, QLabel, QComboBox
 
 class SlurmConfigWidget(QWidget):
-    def __init__(self, config, config_key="slurm", parent=None):
+    def __init__(self, config, config_key="slurm", default_job_name="MakeTorchGraphData", parent=None):
         super().__init__(parent)
         self.config = config
         self.config_key = config_key
+        self.default_job_name = default_job_name
 
         layout = QFormLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -36,7 +37,7 @@ class SlurmConfigWidget(QWidget):
         if self.config_key not in self.config:
             self.config[self.config_key] = {}
         slurm_config = self.config[self.config_key]
-        self.job_name.setText(slurm_config.get("job_name", "MakeTorchGraphData"))
+        self.job_name.setText(slurm_config.get("job_name", self.default_job_name))
         self.output.setText(slurm_config.get("output", "./logs/train_out.txt"))
         self.error.setText(slurm_config.get("error", "./logs/train_err.txt"))
         self.partition.setCurrentText(slurm_config.get("partition", "gpu-h100"))
