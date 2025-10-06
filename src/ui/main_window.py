@@ -363,7 +363,8 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            self._start_command(command)
+            conda_command = f"conda activate NeuroGraph && {command}"
+            self._start_command(conda_command)
 
     def _run_training(self) -> None:
         if self.is_submitting:
