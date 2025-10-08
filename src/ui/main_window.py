@@ -254,8 +254,9 @@ class MainWindow(QMainWindow):
             self.train_script.setText(path)
 
     def _pick_dataset_file(self) -> None:
+        default_path = "/isilon/datalake/lcbn_research/final/beach/JonathanP/NeuroGraph/data/NCanda/raw"
         path, _ = QFileDialog.getOpenFileName(
-            self, "Select dataset file", filter="PyTorch data (*.pt);;All files (*)"
+            self, "Select dataset file", default_path, filter="PyTorch data (*.pt);;All files (*)"
         )
         if path:
             self.dataset_file_path = path
