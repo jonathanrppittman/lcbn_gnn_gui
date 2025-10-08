@@ -24,6 +24,14 @@ QTextEdit, QLineEdit, QListWidget {
     border-radius: 2px;
 }
 
+QTextEdit:hover, QLineEdit:hover, QListWidget:hover {
+    border: 1px solid #ecf0f1;
+}
+
+QTextEdit:focus, QLineEdit:focus, QListWidget:focus {
+    border: 1px solid #1abc9c; /* Turquoise */
+}
+
 QPushButton{
     background-color: #3498db; /* Peter River */
     color: #ecf0f1; /* Clouds */
@@ -40,12 +48,21 @@ QPushButton:pressed{
     background-color: #2980b9; /* Belize Hole */
 }
 
+QPushButton:focus {
+    border: 1px solid #1abc9c; /* Turquoise */
+    background-color: #4aa3df;
+}
+
 QComboBox {
     background-color: #34495e; /* Wet Asphalt */
     border: 1px solid #2c3e50; /* Dark Slate Blue */
     border-radius: 3px;
     padding: 1px 18px 1px 3px;
     min-width: 6em;
+}
+
+QComboBox:hover {
+    border: 1px solid #ecf0f1;
 }
 
 QComboBox:editable {
@@ -81,4 +98,14 @@ QComboBox QAbstractItemView {
 QCheckBox::indicator {
     width: 13px;
     height: 13px;
+}
+
+QCheckBox::indicator:hover {
+    border: 1px solid #ecf0f1;
+    border-radius: 2px;
+}
+
+QCheckBox::indicator:focus {
+    border: 1px solid #1abc9c; /* Turquoise */
+    border-radius: 2px;
 }
