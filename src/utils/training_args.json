@@ -1,12 +1,12 @@
 {
-    "--model": "GATConv",
-    "--data" : "NCandaData500cddr15a_10pct.pt",
-    "--device" : "cuda",
-    "--batch" : 16,
-    "--hidden" : 64,
-    "--seed" : 123,
-    "--threshold" : 0.1,
-    "--num_nodes" : 500,
-    "--epochs" : 500,
-    "--early_stopping" : 10
+    "--device": "cuda",
+    "--batch": 16,
+    "--hidden": 64,
+    "--seed": 123,
+    "--threshold": 0.1,
+    "--num_nodes": 500,
+    "--epochs": 500,
+    "--early_stopping": 10,
+    "--data": "NCandaData500cddr15a_10pct.pt",
+    "--model": "GATConv"
 }

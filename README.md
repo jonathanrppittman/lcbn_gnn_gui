@@ -16,7 +16,7 @@ pip install -r requirements.txt
 3. Launch the GUI:
 
 ```bash
-python src/main.py
+python src/main.py &
 ```
 ## Subsequent Runs
 1. 
@@ -28,7 +28,7 @@ python3 -m venv .venv && source .venv/bin/activate
 3. Launch the GUI:
 
 ```bash
-python src/main.py
+python src/main.py &
 
 ```
 
