@@ -5,7 +5,7 @@ conversion:
   script_path: src/utils/NCandaToTorchGraphDataGUITest.py
   default_args: --inputs {inputs} --labels {labels} --output {output_dir}
 training:
-  script_path: ''
+  script_path: /isilon/datalake/lcbn_research/final/beach/JonathanP/NeuroGraph/main_NCanda.py
   default_args: --data {dataset_dir} --model {model}
 slurm:
   use_slurm_by_default: false
