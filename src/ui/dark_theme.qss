@@ -30,6 +30,14 @@ QTextEdit, QLineEdit, QListWidget {
     border-radius: 2px;
 }
 
+QTextEdit:hover, QLineEdit:hover, QListWidget:hover {
+    border: 1px solid #f0f0f0;
+}
+
+QTextEdit:focus, QLineEdit:focus, QListWidget:focus {
+    border: 1px solid #7ac5cd;
+}
+
 QPushButton{
     background-color: #505050;
     color: #f0f0f0;
@@ -46,12 +54,21 @@ QPushButton:pressed{
     background-color: #707070;
 }
 
+QPushButton:focus {
+    border: 1px solid #7ac5cd;
+    background-color: #606060;
+}
+
 QComboBox {
     background-color: #464646;
     border: 1px solid #5d5d5d;
     border-radius: 3px;
     padding: 1px 18px 1px 3px;
     min-width: 6em;
+}
+
+QComboBox:hover {
+    border: 1px solid #f0f0f0;
 }
 
 QComboBox:editable {
@@ -87,4 +104,14 @@ QComboBox QAbstractItemView {
 QCheckBox::indicator {
     width: 13px;
     height: 13px;
+}
+
+QCheckBox::indicator:hover {
+    border: 1px solid #f0f0f0;
+    border-radius: 2px;
+}
+
+QCheckBox::indicator:focus {
+    border: 1px solid #7ac5cd;
+    border-radius: 2px;
 }
