@@ -1,7 +1,7 @@
 # GNN GUI (PyQt)
 
 This app is a no-code front end to run your existing conversion (.mat -> .pt) and training scripts for graph neural networks, with optional SLURM submission.
-
+It is mostly a project being built by myself for our lab's use and to explore agentic development (with Google's Jules agent @ URL: jules.google).
 ## 1st Run
 
 1. Create a venv and install requirements:
