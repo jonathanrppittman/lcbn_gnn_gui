@@ -363,7 +363,7 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            conda_command = f"conda activate NeuroGraph && {command}"
+            conda_command = f"conda activate /isilon/datalake/lcbn_research/final/software/LCBN/miniconda3/envs/NeuroGraph && {command}"
             self._start_command(conda_command)
 
     def _run_training(self) -> None:
@@ -433,7 +433,7 @@ class MainWindow(QMainWindow):
                     self._append_console(f"SLURM submit failed: {result.stderr}")
             else:
                 command = f"{_detect_interpreter(script)} {args_filled}".strip()
-                conda_command = f"conda activate NeuroGraph && {command}"
+                conda_command = f"conda activate /isilon/datalake/lcbn_research/final/software/LCBN/miniconda3/envs/NeuroGraph && {command}"
                 self._start_command(conda_command)
         finally:
             self.is_submitting = False
