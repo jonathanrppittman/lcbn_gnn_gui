@@ -32,6 +32,22 @@ python src/main.py &
 
 ```
 
+## Running Tests
+
+To run the test suite, first install the development dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Then, run pytest from the root of the repository:
+
+```bash
+python3 -m pytest
+```
+
+**Note:** Due to limitations in the sandboxed testing environment, tests that require a Qt Application (`pytest-qt`) may not run correctly. The current test suite focuses on core, non-GUI logic.
+
 ## Notes
 - The GUI executes your scripts; it does not replace them. You can provide extra CLI args in the text fields. Tokens supported in args:
   - `{inputs}`: space-separated input files
