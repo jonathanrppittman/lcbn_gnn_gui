@@ -56,12 +56,12 @@ python src/main.py &
 ```bash
 .venv\Scripts\activate
 ```
-2. (optional) Set script paths in `config/default.yaml`
+2. (optional) Set script paths in `config\default.yaml`
 
 3. Launch the GUI:
 
 ```bash
-python src/main.py
+python src\main.py
 ```
 
 ## Running Tests
