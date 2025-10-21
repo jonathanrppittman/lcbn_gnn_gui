@@ -1,5 +1,6 @@
 import os
 import subprocess
+import platform
 from typing import Optional, Iterator, Tuple
 from PyQt5.QtCore import QThread, pyqtSignal
 
@@ -20,8 +21,13 @@ class ProcessExecutor:
         The final yielded value will be an empty string and the return code.
         """
         try:
+            if platform.system() == "Windows":
+                command_list = ["cmd.exe", "/c", self.command]
+            else:
+                command_list = ["/usr/bin/bash", "-c", self.command]
+
             proc = subprocess.Popen(
-                ["/usr/bin/bash", "-c", self.command],
+                command_list,
                 cwd=self.working_dir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,

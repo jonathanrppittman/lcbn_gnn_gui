@@ -1,6 +1,7 @@
 from typing import List, Dict
 import os
 import json
+import platform
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QFileDialog, QMessageBox, QApplication,
     QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit,
@@ -212,6 +213,12 @@ class MainWindow(QMainWindow):
         self._setup_training_params()
         self._update_slurm_visibility()
 
+        if platform.system() == "Windows":
+            self.use_slurm_conversion.setVisible(False)
+            self.slurm_conversion_group.setVisible(False)
+            self.use_slurm.setVisible(False)
+            self.slurm_training_group.setVisible(False)
+
     # ------------- UI Handlers -------------
     def _update_slurm_visibility(self) -> None:
         self.slurm_conversion_group.setVisible(self.use_slurm_conversion.isChecked())
@@ -254,7 +261,7 @@ class MainWindow(QMainWindow):
             self.train_script.setText(path)
 
     def _pick_dataset_file(self) -> None:
-        default_path = "/isilon/datalake/lcbn_research/final/beach/JonathanP/NeuroGraph/data/NCanda/raw"
+        default_path = self.config.get("default_dataset_path", os.path.expanduser("~"))
         path, _ = QFileDialog.getOpenFileName(
             self, "Select dataset file", default_path, filter="PyTorch data (*.pt);;All files (*)"
         )
@@ -364,7 +371,11 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            conda_command = f"conda activate /isilon/datalake/lcbn_research/final/software/LCBN/miniconda3/envs/NeuroGraph && {command}"
+            env_name = self.config.get("environment_name", "NeuroGraph")
+            if platform.system() == "Windows":
+                conda_command = f"conda activate {env_name} && {command}"
+            else:
+                conda_command = f"source activate {env_name} && {command}"
             self._start_command(conda_command)
 
     def _run_training(self) -> None:
@@ -434,7 +445,11 @@ class MainWindow(QMainWindow):
                     self._append_console(f"SLURM submit failed: {result.stderr}")
             else:
                 command = f"{_detect_interpreter(script)} {args_filled}".strip()
-                conda_command = f"conda activate /isilon/datalake/lcbn_research/final/software/LCBN/miniconda3/envs/NeuroGraph && {command}"
+                env_name = self.config.get("environment_name", "NeuroGraph")
+                if platform.system() == "Windows":
+                    conda_command = f"conda activate {env_name} && {command}"
+                else:
+                    conda_command = f"source activate {env_name} && {command}"
                 self._start_command(conda_command)
         finally:
             self.is_submitting = False
