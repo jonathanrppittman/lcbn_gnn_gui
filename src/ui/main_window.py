@@ -381,9 +381,9 @@ class MainWindow(QMainWindow):
         else:
             conda_env = self.conda_env.text().strip()
             if platform.system() == "Windows":
-                conda_command = f"conda activate {conda_env} && {command}"
-            else:
                 conda_command = f"source activate {conda_env} && {command}"
+            else:
+                conda_command = f"conda activate {conda_env} && {command}"
             self._start_command(conda_command)
 
     def _run_training(self) -> None:
@@ -456,9 +456,9 @@ class MainWindow(QMainWindow):
                 command = f"{_detect_interpreter(script)} {args_filled}".strip()
                 conda_env = self.conda_env.text().strip()
                 if platform.system() == "Windows":
-                    conda_command = f"conda activate {conda_env} && {command}"
-                else:
                     conda_command = f"source activate {conda_env} && {command}"
+                else:
+                    conda_command = f"conda activate {conda_env} && {command}"
                 self._start_command(conda_command)
         finally:
             self.is_submitting = False
