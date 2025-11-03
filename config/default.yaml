@@ -21,6 +21,7 @@ slurm:
   additional: ''
   env_activation: ''
   cpus: 4
+  conda_env: ''
 theme: dark colorful
 slurm_conversion: {}
 slurm_training: {}

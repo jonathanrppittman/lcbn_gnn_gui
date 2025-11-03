@@ -371,11 +371,11 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            env_name = self.config.get("environment_name", "NeuroGraph")
+            conda_env = self.slurm_conversion_config_widget.conda_env.text().strip()
             if platform.system() == "Windows":
-                conda_command = f"conda activate {env_name} && {command}"
+                conda_command = f"conda activate {conda_env} && {command}"
             else:
-                conda_command = f"source activate {env_name} && {command}"
+                conda_command = f"source activate {conda_env} && {command}"
             self._start_command(conda_command)
 
     def _run_training(self) -> None:
@@ -445,11 +445,11 @@ class MainWindow(QMainWindow):
                     self._append_console(f"SLURM submit failed: {result.stderr}")
             else:
                 command = f"{_detect_interpreter(script)} {args_filled}".strip()
-                env_name = self.config.get("environment_name", "NeuroGraph")
+                conda_env = self.slurm_training_config_widget.conda_env.text().strip()
                 if platform.system() == "Windows":
-                    conda_command = f"conda activate {env_name} && {command}"
+                    conda_command = f"conda activate {conda_env} && {command}"
                 else:
-                    conda_command = f"source activate {env_name} && {command}"
+                    conda_command = f"source activate {conda_env} && {command}"
                 self._start_command(conda_command)
         finally:
             self.is_submitting = False

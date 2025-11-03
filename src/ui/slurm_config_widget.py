@@ -20,6 +20,7 @@ class SlurmConfigWidget(QWidget):
         self.time = QLineEdit()
         self.additional = QLineEdit()
         self.env_activation = QLineEdit()
+        self.conda_env = QLineEdit()
 
         layout.addRow(QLabel("Job Name:"), self.job_name)
         layout.addRow(QLabel("Output File:"), self.output)
@@ -30,6 +31,7 @@ class SlurmConfigWidget(QWidget):
         layout.addRow(QLabel("Time (HH:MM:SS):"), self.time)
         layout.addRow(QLabel("Additional SBATCH lines:"), self.additional)
         layout.addRow(QLabel("Env Activation:"), self.env_activation)
+        layout.addRow(QLabel("Conda Env:"), self.conda_env)
 
         self._load_config()
 
@@ -46,6 +48,7 @@ class SlurmConfigWidget(QWidget):
         self.time.setText(slurm_config.get("time", "04:00:00"))
         self.additional.setText(slurm_config.get("additional", ""))
         self.env_activation.setText(slurm_config.get("env_activation", ""))
+        self.conda_env.setText(slurm_config.get("conda_env", "NeuroGraph"))
 
         self._connect_signals()
 
@@ -59,6 +62,7 @@ class SlurmConfigWidget(QWidget):
         self.time.textChanged.connect(lambda t: self._update_config("time", t))
         self.additional.textChanged.connect(lambda t: self._update_config("additional", t))
         self.env_activation.textChanged.connect(lambda t: self._update_config("env_activation", t))
+        self.conda_env.textChanged.connect(lambda t: self._update_config("conda_env", t))
 
     def _update_config(self, key, value):
         if self.config_key not in self.config:
