@@ -57,6 +57,7 @@ def main():
     parser.add_argument('--label_column', type=str, default='cddr15a', help='The column name in the labels file to use.')
     parser.add_argument('--threshold', type=float, default=0.05, help='Proportional threshold for connectivity matrix (default: 0.05).')
     parser.add_argument('--ROIs', type=int, default=500, help='The number of ROIs examined (default 500).')
+    parser.add_argument('--device', type=str, default='cuda', help='Enter either cuda or cpu into this field to use either gpu or cpu respectively.')
     args = parser.parse_args()
     # Load input data
     input_matrices = []
@@ -98,6 +99,9 @@ def main():
 
     node_offset = 0
     edge_offset = 0
+
+    if args.device == 'cuda' and torch.cuda.is_available():
+        torch.set_default_device('cuda')
 
     for i in range(GraphsNum):
         Adj_i = threshold_proportional(AdjMats[:, :, i], args.threshold)
