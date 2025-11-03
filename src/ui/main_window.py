@@ -66,6 +66,13 @@ class MainWindow(QMainWindow):
         theme_row.addStretch(1)
         self._load_theme()
 
+        # Environment config
+        env_row = QHBoxLayout()
+        root.addLayout(env_row)
+        env_row.addWidget(QLabel("Conda Environment:"))
+        self.conda_env = QLineEdit(self.config.get("conda_env", "NeuroGraph"))
+        env_row.addWidget(self.conda_env)
+
         # Conversion widgets
         conv_row = QHBoxLayout()
         root.addLayout(conv_row)
@@ -362,6 +369,7 @@ class MainWindow(QMainWindow):
 
         if self.use_slurm_conversion.isChecked():
             slurm_config = self.config.get("slurm_conversion", {})
+            slurm_config["conda_env"] = self.conda_env.text().strip()
             script_path = update_slurm_script(
                 "src/utils/MakeTorchGraphData.sh", command, slurm_config, self.config["jobs_dir"]
             )
@@ -371,7 +379,7 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            conda_env = self.slurm_conversion_config_widget.conda_env.text().strip()
+            conda_env = self.conda_env.text().strip()
             if platform.system() == "Windows":
                 conda_command = f"conda activate {conda_env} && {command}"
             else:
@@ -437,6 +445,7 @@ class MainWindow(QMainWindow):
                 python_script = "main_NCanda.py"
                 command = f"python {python_script} {args_filled}".strip()
                 slurm_config = self.config.get("slurm_training", {})
+                slurm_config["conda_env"] = self.conda_env.text().strip()
                 script_path = update_slurm_script(script, command, slurm_config, self.config["jobs_dir"])
                 result = submit_job(script_path)
                 if result.returncode == 0:
@@ -445,7 +454,7 @@ class MainWindow(QMainWindow):
                     self._append_console(f"SLURM submit failed: {result.stderr}")
             else:
                 command = f"{_detect_interpreter(script)} {args_filled}".strip()
-                conda_env = self.slurm_training_config_widget.conda_env.text().strip()
+                conda_env = self.conda_env.text().strip()
                 if platform.system() == "Windows":
                     conda_command = f"conda activate {conda_env} && {command}"
                 else:
@@ -483,6 +492,7 @@ class MainWindow(QMainWindow):
         if "slurm_training" not in self.config:
             self.config["slurm_training"] = {}
         self.config["slurm_training"]["use_slurm_by_default"] = self.use_slurm.isChecked()
+        self.config["conda_env"] = self.conda_env.text().strip()
         save_config(self.config)
 
     def _load_theme(self) -> None:
