@@ -66,6 +66,13 @@ class MainWindow(QMainWindow):
         theme_row.addStretch(1)
         self._load_theme()
 
+        # Environment config
+        env_row = QHBoxLayout()
+        root.addLayout(env_row)
+        env_row.addWidget(QLabel("Conda Environment:"))
+        self.conda_env = QLineEdit(self.config.get("conda_env", "NeuroGraph"))
+        env_row.addWidget(self.conda_env)
+
         # Conversion widgets
         conv_row = QHBoxLayout()
         root.addLayout(conv_row)
@@ -479,6 +486,7 @@ class MainWindow(QMainWindow):
         if "slurm_training" not in self.config:
             self.config["slurm_training"] = {}
         self.config["slurm_training"]["use_slurm_by_default"] = self.use_slurm.isChecked()
+        self.config["conda_env"] = self.conda_env.text().strip()
         save_config(self.config)
 
     def _load_theme(self) -> None:

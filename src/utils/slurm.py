@@ -43,6 +43,11 @@ def update_slurm_script(template_path: str, command: str, slurm_cfg: Dict[str, A
     # Replace the placeholder with the new command
     content = content.replace("#COMMAND_PLACEHOLDER", new_command_str)
 
+    # Replace the conda activation placeholder
+    conda_env = slurm_cfg.get("conda_env", "NeuroGraph")
+    conda_activation_command = f"conda activate {conda_env}"
+    content = content.replace("#CONDA_ACTIVATION_PLACEHOLDER", conda_activation_command)
+
     # Create a new script in the jobs directory
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     job_name = slurm_cfg.get("job_name", "gnn_job").replace(" ", "_")
