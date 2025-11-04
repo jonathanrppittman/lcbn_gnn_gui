@@ -12,5 +12,6 @@
 module purge
 module load cuda-toolkit/11.8.0
 
+#CONDA_ACTIVATION_PLACEHOLDER
 
 #COMMAND_PLACEHOLDER

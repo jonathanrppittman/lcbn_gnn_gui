@@ -22,5 +22,6 @@ slurm:
   env_activation: ''
   cpus: 4
 theme: dark colorful
+conda_env: NeuroGraph
 slurm_conversion: {}
 slurm_training: {}
