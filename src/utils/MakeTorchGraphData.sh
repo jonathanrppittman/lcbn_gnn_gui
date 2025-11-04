@@ -12,6 +12,5 @@
 module purge
 module load cuda-toolkit/11.8.0
 
-conda activate /isilon/datalake/lcbn_research/final/software/LCBN/miniconda3/envs/NeuroGraph
 
 #COMMAND_PLACEHOLDER
