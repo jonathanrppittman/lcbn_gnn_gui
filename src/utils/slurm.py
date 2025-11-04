@@ -4,7 +4,7 @@ from typing import Dict, Any
 import re
 from datetime import datetime
 
-def update_slurm_script(template_path: str, command: str, slurm_cfg: Dict[str, Any], jobs_dir: str) -> str:
+def update_slurm_script(template_path: str, command: str, slurm_cfg: Dict[str, Any], jobs_dir: str, conda_env: str) -> str:
     """
     Creates a new SLURM script based on a template, filling in a command and SBATCH directives.
     """
@@ -38,7 +38,7 @@ def update_slurm_script(template_path: str, command: str, slurm_cfg: Dict[str, A
 
     # The command from the GUI is authoritative.
     # The srun part is added here to ensure it's always present.
-    new_command_str = f"srun {command}"
+    new_command_str = f"srun conda run -n {conda_env} {command}"
 
     # Replace the placeholder with the new command
     content = content.replace("#COMMAND_PLACEHOLDER", new_command_str)

@@ -371,7 +371,7 @@ class MainWindow(QMainWindow):
             slurm_config = self.config.get("slurm_conversion", {})
             slurm_config["conda_env"] = self.conda_env.text().strip()
             script_path = update_slurm_script(
-                "src/utils/MakeTorchGraphData.sh", command, slurm_config, self.config["jobs_dir"]
+                "src/utils/MakeTorchGraphData.sh", command, slurm_config, self.config["jobs_dir"], env_name
             )
             result = submit_job(script_path)
             if result.returncode == 0:
