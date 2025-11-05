@@ -369,7 +369,7 @@ class MainWindow(QMainWindow):
 
         if self.use_slurm_conversion.isChecked():
             slurm_config = self.config.get("slurm_conversion", {})
-            env_name = self.config.get("environment_name", "NeuroGraph")
+            env_name = self.config.get("conda_env", "NeuroGraph")
             script_path = update_slurm_script(
                 "src/utils/MakeTorchGraphData.sh", command, slurm_config, self.config["jobs_dir"], env_name
             )
@@ -379,7 +379,7 @@ class MainWindow(QMainWindow):
             else:
                 self._append_console(f"SLURM submit failed: {result.stderr}")
         else:
-            env_name = self.config.get("environment_name", "NeuroGraph")
+            env_name = self.config.get("conda_env", "NeuroGraph")
             conda_command = f"conda run -n {env_name} {command}"
             self._start_command(conda_command)
 
@@ -442,7 +442,7 @@ class MainWindow(QMainWindow):
                 python_script = "main_NCanda.py"
                 command = f"python {python_script} {args_filled}".strip()
                 slurm_config = self.config.get("slurm_training", {})
-                env_name = self.config.get("environment_name", "NeuroGraph")
+                env_name = self.config.get("conda_env", "NeuroGraph")
                 script_path = update_slurm_script(script, command, slurm_config, self.config["jobs_dir"], env_name)
                 result = submit_job(script_path)
                 if result.returncode == 0:
@@ -451,7 +451,7 @@ class MainWindow(QMainWindow):
                     self._append_console(f"SLURM submit failed: {result.stderr}")
             else:
                 command = f"{_detect_interpreter(script)} {args_filled}".strip()
-                env_name = self.config.get("environment_name", "NeuroGraph")
+                env_name = self.config.get("conda_env", "NeuroGraph")
                 conda_command = f"conda run -n {env_name} {command}"
                 self._start_command(conda_command)
         finally:
