@@ -74,15 +74,6 @@ class MainWindow(QMainWindow):
         env_row.addWidget(self.conda_env)
 
         # Conversion widgets
-        conv_row = QHBoxLayout()
-        root.addLayout(conv_row)
-        conv_row.addWidget(QLabel("Conversion script:"))
-        self.conv_script = QLineEdit(self.config["conversion"]["script_path"])
-        conv_row.addWidget(self.conv_script, 1)
-        btn_browse_conv = QPushButton("Browse")
-        btn_browse_conv.clicked.connect(self._pick_conv_script)
-        conv_row.addWidget(btn_browse_conv)
-
         add_files_row = QHBoxLayout()
         root.addLayout(add_files_row)
         self.btn_add_files = QPushButton("Add .mat inputs")
@@ -157,15 +148,6 @@ class MainWindow(QMainWindow):
         convert_button_row.addWidget(self.btn_convert)
 
         # Training widgets
-        train_row1 = QHBoxLayout()
-        root.addLayout(train_row1)
-        train_row1.addWidget(QLabel("Training script:"))
-        self.train_script = QLineEdit(self.config["training"]["script_path"])
-        train_row1.addWidget(self.train_script, 1)
-        btn_browse_train = QPushButton("Browse")
-        btn_browse_train.clicked.connect(self._pick_train_script)
-        train_row1.addWidget(btn_browse_train)
-
         train_row2 = QHBoxLayout()
         root.addLayout(train_row2)
         train_row2.addWidget(QLabel("Dataset file (.pt):"))
@@ -231,11 +213,6 @@ class MainWindow(QMainWindow):
         self.slurm_conversion_group.setVisible(self.use_slurm_conversion.isChecked())
         self.slurm_training_group.setVisible(self.use_slurm.isChecked())
 
-    def _pick_conv_script(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Select conversion script")
-        if path:
-            self.conv_script.setText(path)
-
     def _add_mat_files(self) -> None:
         self._add_files_to_list(self.files_list, "Select .mat input files")
 
@@ -261,11 +238,6 @@ class MainWindow(QMainWindow):
         d = QFileDialog.getExistingDirectory(self, "Select output directory")
         if d:
             self.out_dir.setText(d)
-
-    def _pick_train_script(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Select training script")
-        if path:
-            self.train_script.setText(path)
 
     def _pick_dataset_file(self) -> None:
         default_path = self.config.get("default_dataset_path", os.path.expanduser("~"))
@@ -335,9 +307,9 @@ class MainWindow(QMainWindow):
         return result
 
     def _run_conversion(self) -> None:
-        script = self.conv_script.text().strip()
+        script = self.config.get("conversion", {}).get("script_path", "").strip()
         if not script:
-            QMessageBox.warning(self, "Missing script", "Please select a conversion script.")
+            QMessageBox.warning(self, "Missing script", "Conversion script path is missing in configuration.")
             return
         if self.files_list.count() == 0:
             QMessageBox.warning(self, "No files", "Please add .mat files to convert.")
@@ -390,9 +362,9 @@ class MainWindow(QMainWindow):
 
         try:
             self.is_submitting = True
-            script = self.train_script.text().strip()
+            script = self.config.get("training", {}).get("script_path", "").strip()
             if not script:
-                QMessageBox.warning(self, "Missing script", "Please select a training script.")
+                QMessageBox.warning(self, "Missing script", "Training script path is missing in configuration.")
                 return
 
             # Gather parameters from the dynamically generated widgets
@@ -478,8 +450,6 @@ class MainWindow(QMainWindow):
         self._append_console(f"\nProcess finished with code {code}\n")
 
     def _persist_config(self) -> None:
-        self.config["conversion"]["script_path"] = self.conv_script.text().strip()
-        self.config["training"]["script_path"] = self.train_script.text().strip()
         if "slurm_conversion" not in self.config:
             self.config["slurm_conversion"] = {}
         self.config["slurm_conversion"]["use_slurm_by_default"] = self.use_slurm_conversion.isChecked()
