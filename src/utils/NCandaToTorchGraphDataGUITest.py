@@ -48,7 +48,7 @@ def threshold_proportional(W: np.ndarray, p: float = 0.05) -> np.ndarray: #pytho
 
     return W_thr
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(description="Convert NCANDA .mat files to PyTorch Geometric data.")
     parser.add_argument('--inputs', type=str, nargs='+', required=True, help='List of input .mat file paths.')
     parser.add_argument('--labels', type=str, required=True, help='Path to the labels .mat file.')
@@ -58,7 +58,9 @@ def main():
     parser.add_argument('--threshold', type=float, default=0.05, help='Proportional threshold for connectivity matrix (default: 0.05).')
     parser.add_argument('--ROIs', type=int, default=500, help='The number of ROIs examined (default 500).')
     parser.add_argument('--device', type=str, default='cuda', help='Enter either cuda or cpu into this field to use either gpu or cpu respectively.')
-    args = parser.parse_args()
+    return parser.parse_args()
+
+def process_data(args):
     # Load input data
     input_matrices = []
     for path in args.inputs:
@@ -139,6 +141,10 @@ def main():
     
     torch.save(data, output_path)
     print(f"Saved data to {output_path}")
+
+def main():
+    args = parse_arguments()
+    process_data(args)
 
 if __name__ == "__main__":
     main()
