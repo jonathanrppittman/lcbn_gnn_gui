@@ -331,10 +331,10 @@ class MainWindow(QMainWindow):
         # Construct the command with proper arguments.
         command_parts = [
             _detect_interpreter(script),
-            "--inputs", *[f'"{p}"' for p in input_files],
-            "--labels", f'"{label_file}"',
-            "--output_dir", f'"{out_dir}"',
-            "--ROIs", self.num_rois.text().strip()
+            "--inputs", *[shlex.quote(p) for p in input_files],
+            "--labels", shlex.quote(label_file),
+            "--output_dir", shlex.quote(out_dir),
+            "--ROIs", shlex.quote(self.num_rois.text().strip())
         ]
 
         command = " ".join(command_parts)
