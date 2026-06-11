@@ -2,6 +2,7 @@ import os
 import subprocess
 from typing import Dict, Any
 import re
+import shlex
 from datetime import datetime
 
 def update_slurm_script(template_path: str, command: str, slurm_cfg: Dict[str, Any], jobs_dir: str, conda_env: str) -> str:
@@ -37,15 +38,23 @@ def update_slurm_script(template_path: str, command: str, slurm_cfg: Dict[str, A
                 content = pattern.sub(rf"\1 {new_value}", content)
 
     # The command from the GUI is authoritative.
+    # To prevent command injection, we safely quote the conda environment and the command components.
+    safe_conda_env = shlex.quote(conda_env)
+
+    # Split the command into parts and quote each part safely
+    command_parts = shlex.split(command)
+    safe_command = " ".join(shlex.quote(part) for part in command_parts)
+
     # The srun part is added here to ensure it's always present.
-    new_command_str = f"srun conda run -n {conda_env} {command}"
+    new_command_str = f"srun conda run -n {safe_conda_env} {safe_command}"
 
     # Replace the placeholder with the new command
     content = content.replace("#COMMAND_PLACEHOLDER", new_command_str)
 
     # Replace the conda activation placeholder
-    conda_env = slurm_cfg.get("conda_env", "NeuroGraph")
-    conda_activation_command = f"conda activate {conda_env}"
+    cfg_conda_env = slurm_cfg.get("conda_env", "NeuroGraph")
+    safe_cfg_conda_env = shlex.quote(cfg_conda_env)
+    conda_activation_command = f"conda activate {safe_cfg_conda_env}"
     content = content.replace("#CONDA_ACTIVATION_PLACEHOLDER", conda_activation_command)
 
     # Create a new script in the jobs directory
