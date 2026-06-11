@@ -1,6 +1,7 @@
 import os
 import subprocess
 import platform
+import shlex
 from typing import Optional, Iterator, Tuple
 from PyQt5.QtCore import QThread, pyqtSignal
 
@@ -22,9 +23,12 @@ class ProcessExecutor:
         """
         try:
             if platform.system() == "Windows":
-                command_list = ["cmd.exe", "/c", self.command]
+                # Parse Windows command string into list, keeping quotes intact initially to preserve paths
+                parsed_args = shlex.split(self.command, posix=False)
+                # Remove outermost quotes that shlex leaves behind for posix=False
+                command_list = [arg[1:-1] if arg.startswith('"') and arg.endswith('"') else arg for arg in parsed_args]
             else:
-                command_list = ["/usr/bin/bash", "-c", self.command]
+                command_list = shlex.split(self.command, posix=True)
 
             proc = subprocess.Popen(
                 command_list,
