@@ -21,7 +21,8 @@ def test_executor_success():
 
 def test_executor_failure():
     """Test that ProcessExecutor handles a failing command and captures the error code."""
-    command = '>&2 echo "An error occurred" && exit 123'
+    # We use python -c to simulate a failure and stderr output, instead of relying on shell operators like && and redirect
+    command = "python3 -c \"import sys; print('An error occurred', file=sys.stderr); sys.exit(123)\""
     executor = ProcessExecutor(command)
 
     output_lines = []
@@ -62,9 +63,14 @@ def test_executor_command_not_found():
         if code == -1:
             output_lines.append(line)
         else:
+            # If the process fails to start, the exception is yielded with exit code 1
+            if line:
+                output_lines.append(line)
             return_code = code
 
-    # The shell will output an error message
-    assert "command not found" in "".join(output_lines).lower()
-    # The exit code from the shell for command not found is typically 127
-    assert return_code == 127
+    # Without the shell, Popen itself will raise a FileNotFoundError
+    # which is caught and yielded as a string in our executor.
+    output_str = "".join(output_lines).lower()
+    assert "no such file or directory" in output_str or "not found" in output_str
+    # The exit code returned by our exception handler is 1
+    assert return_code == 1
