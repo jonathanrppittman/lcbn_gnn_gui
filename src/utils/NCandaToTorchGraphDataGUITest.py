@@ -40,8 +40,9 @@ def threshold_proportional(W: np.ndarray, p: float = 0.05) -> np.ndarray: #pytho
 
     # Create new thresholded matrix
     W_thr = np.zeros_like(W)
-    for i, j in keep_inds:
-        W_thr[i, j] = W[i, j]
+    if len(keep_inds) > 0:
+        rows, cols = keep_inds[:, 0], keep_inds[:, 1]
+        W_thr[rows, cols] = W[rows, cols]
 
     if symmetric:
         W_thr = W_thr + W_thr.T  # Restore symmetry
