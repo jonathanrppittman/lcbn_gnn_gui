@@ -7,58 +7,79 @@ from collections import defaultdict
 import argparse
 import pandas as pd
 import os
+import numpy as np
 
-def threshold_proportional(W: np.ndarray, p: float = 0.05) -> np.ndarray: #python version of BCT function originally written in MATLAB
+parser = argparse.ArgumentParser(description="Convert NCANDA .mat files to PyTorch Geometric data.")
+parser.add_argument('--inputs', type=str, nargs='+', required=True, help='List of input .mat file paths.')
+parser.add_argument('--labels', type=str, required=True, help='Path to the labels .mat file.')
+parser.add_argument('--output_dir', type=str, default=os.path.join("..", "NeuroGraph", "data", "NCanda", "raw"), help='Directory to save the output .pt file. Defaults to ../NeuroGraph/data/NCanda/raw')
+parser.add_argument('--num_labels', type=int, default=2, help='Number of labels for classification (default: 2).')
+parser.add_argument('--label_column', type=str, default='cddr15a', help='The column name in the labels file to use.')
+parser.add_argument('--threshold', type=float, default=0.05, help='Proportional threshold for connectivity matrix (default: 0.05).')
+parser.add_argument('--ROIs', type=int, default=500, help='The number of ROIs examined (default 500).')
+parser.add_argument('--device', type=str, default='cuda', help='Enter either cuda or cpu into this field to use either gpu or cpu respectively.')
+args = parser.parse_args()
+
+
+
+
+def threshold_proportional(W: np.ndarray, p: float = 0.1) -> np.ndarray:
     """
-    Thresholds a connectivity matrix by retaining the top p proportion of strongest weights.
-    
-    Parameters:
-        W (np.ndarray): Square connectivity matrix (symmetric or asymmetric).
-        p (float): Proportion of strongest weights to retain (0 < p < 1).
-    
-    Returns:
-        np.ndarray: Thresholded matrix with only top p weights retained.
+    Python version of BCT threshold_proportional.
+    Preserves a proportion p of the strongest weights.
     """
-    W = W.copy()
+
+    W = W.copy().astype(float)
     n = W.shape[0]
-    np.fill_diagonal(W, 0)  # Remove self-connections
 
+    # Remove diagonal
+    np.fill_diagonal(W, 0)
+
+    # Symmetry check
     symmetric = np.allclose(W, W.T, atol=1e-10)
     if symmetric:
-        W = np.triu(W)  # Work with upper triangle only
+        Wu = np.triu(W)
         ud = 2
     else:
+        Wu = W
         ud = 1
 
-    # Get indices and values of non-zero elements
-    inds = np.transpose(np.nonzero(W))
-    weights = W[W != 0]
-    sorted_inds = inds[np.argsort(-np.abs(weights))]  # Sort by descending absolute weight
+    # Flatten nonzero upper-tri (or full matrix if asymmetric)
+    flat = Wu.ravel()
+    nz_mask = flat != 0
+    nz_vals = flat[nz_mask]
 
-    num_edges_to_keep = int(round((n**2 - n) * p / ud))
-    keep_inds = sorted_inds[:num_edges_to_keep]
+    # Number of edges to preserve
+    k = int(round((n*n - n) * p / ud))
 
-    # Create new thresholded matrix
-    W_thr = np.zeros_like(W)
-    for i, j in keep_inds:
-        W_thr[i, j] = W[i, j]
+    if k == 0:
+        return np.zeros_like(W)
 
+    # Sort by absolute magnitude, descending
+    # Use argpartition → faster than full argsort
+    if k < nz_vals.size:
+        topk_idx = np.argpartition(-np.abs(nz_vals), k-1)[:k]
+    else:
+        topk_idx = np.arange(nz_vals.size)
+
+    # Create thresholded flattened array
+    flat_thr = np.zeros_like(flat)
+    nz_positions = np.where(nz_mask)[0]
+    keep_positions = nz_positions[topk_idx]
+
+    flat_thr[keep_positions] = flat[keep_positions]
+
+    # Reshape
+    W_thr = flat_thr.reshape(n, n)
+
+    # Restore symmetry if needed
     if symmetric:
-        W_thr = W_thr + W_thr.T  # Restore symmetry
+        W_thr = W_thr + W_thr.T
 
     return W_thr
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert NCANDA .mat files to PyTorch Geometric data.")
-    parser.add_argument('--inputs', type=str, nargs='+', required=True, help='List of input .mat file paths.')
-    parser.add_argument('--labels', type=str, required=True, help='Path to the labels .mat file.')
-    parser.add_argument('--output_dir', type=str, default=os.path.join("..", "NeuroGraph", "data", "NCanda", "raw"), help='Directory to save the output .pt file. Defaults to ../NeuroGraph/data/NCanda/raw')
-    parser.add_argument('--num_labels', type=int, default=2, help='Number of labels for classification (default: 2).')
-    parser.add_argument('--label_column', type=str, default='cddr15a', help='The column name in the labels file to use.')
-    parser.add_argument('--threshold', type=float, default=0.05, help='Proportional threshold for connectivity matrix (default: 0.05).')
-    parser.add_argument('--ROIs', type=int, default=500, help='The number of ROIs examined (default 500).')
-    parser.add_argument('--device', type=str, default='cuda', help='Enter either cuda or cpu into this field to use either gpu or cpu respectively.')
-    args = parser.parse_args()
+
     # Load input data
     input_matrices = []
     for path in args.inputs:
@@ -99,12 +120,13 @@ def main():
 
     node_offset = 0
     edge_offset = 0
+    threshold = abs(args.threshold)
 
     if args.device == 'cuda' and torch.cuda.is_available():
         torch.set_default_device('cuda')
 
     for i in range(GraphsNum):
-        Adj_i = threshold_proportional(AdjMats[:, :, i], args.threshold)
+        Adj_i = threshold_proportional(AdjMats[:, :, i], threshold) if threshold < 1.0 else AdjMats[:, :, i]
 
         x = torch.tensor(Adj_i, dtype=torch.float32)
 
